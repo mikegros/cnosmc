@@ -1,7 +1,8 @@
 cno_smc <- function(n_samples, data, model,
                     init_links  = 1,
                     p_link      = 0.9,
-                    datalst     = NULL,
+                    n_mh        = 5,
+                    split_inhib = FALSE,
                     n_cores     = 1,
                     diagnostics = F){
   #
@@ -12,18 +13,19 @@ cno_smc <- function(n_samples, data, model,
   #                 Did tons of code cleaning to get it completely working and clean as well
   #
 
-  if (!is.null(datalst)){
-    dataList=splitDataByInhibitor(data)}
+  inhib_inds <- NULL
+  if (split_inhib){
+    inhib_settings <- unique(data$valueInhibitors)
 
-  if (!is.null(datalst)){
-    #changed this o accomodate data list
-    paramsList          <- lapply(1:length(dataList), function(x) {defaultParametersFuzzy(dataList[[x]], model)})
-    indexList           <- lapply(1:length(dataList), function(x) {indexFinder(CNOlist = dataList[[x]], model = model)})
-    paramsList$dataList = SplitDataByInhibitor(data)
-  }else{
-    paramsList          <- defaultParametersFuzzy(data, model)
-    indexList           <- indexFinder(CNOlist = data, model = model)
+    if (ncol(data$valueInhibitors) == 1){
+      inhib_inds <- lapply(inhib_settings, function(x) which(data$valueInhibitors == x))
+    } else {
+      inhib_inds <- apply(inhib_settings,1,function(y) which(apply(data$valueInhibitors,1,function(x) all(x==y))))
+    }
   }
+
+  paramsList          <- defaultParametersFuzzy(data, model)
+  indexList           <- indexFinder(CNOlist = data, model = model)
 
   if( n_cores > 1 ){
     # outfile arguement tells R where to write print console output (print statements, etc) when running in parallel
@@ -36,7 +38,7 @@ cno_smc <- function(n_samples, data, model,
 
 
   findMainEffects <- unlist(lapply(strsplit(model$reacID,'\\+'),function(x) {length(x)<2} ))
-  n_params        <- length(which(findMainEffects==T))
+  n_params        <- sum(findMainEffects)
 
   test_bString    <- rep(0,n_params)
 
@@ -47,56 +49,46 @@ cno_smc <- function(n_samples, data, model,
   # Turn on some links for initial subgraph
   test_bString[c(init_links)] <- 1
 
-  if (!is.null(datalst)){
-    nmodels=length(paramsList$dataList)
-    init_Gstring <- rbinom(nmodels*n_params*n_samples,1,p_link)
+  if (split_inhib){
+    n_models     <- length(inhib_inds)
+    init_Gstring <- rbinom(n_models*n_params*n_samples,1,p_link)
   }else{
+    n_models     <- 1
     init_Gstring <- rbinom(n_params*n_samples,1,p_link)
   }
+
   smc_samples <- list(gCube = matrix(init_gCube, ncol = n_params, nrow = n_samples, byrow = TRUE))
 
-  smc_samples$nCube   <- matrix(init_nCube, ncol = n_params, nrow = n_samples, byrow = TRUE)
-  smc_samples$kCube   <- matrix(init_kCube, ncol = n_params, nrow = n_samples, byrow = TRUE)
-  smc_samples$Gstring <- matrix(init_Gstring, ncol =3*n_params, nrow = n_samples, byrow = TRUE)
+  smc_samples$nCube   <- matrix(init_nCube,   ncol = n_params,          nrow = n_samples, byrow = TRUE)
+  smc_samples$kCube   <- matrix(init_kCube,   ncol = n_params,          nrow = n_samples, byrow = TRUE)
+  smc_samples$Gstring <- matrix(init_Gstring, ncol = n_models*n_params, nrow = n_samples, byrow = TRUE)
 
-  if (!is.null(datalst)){
-    colnames(smc_samples$Gstring)=rep(colnames(model$interMat)[1:n_params],nmodels)
+  if (split_inhib){
+    colnames(smc_samples$Gstring) <- rep(colnames(model$interMat)[1:n_params],n_models)
   }else{
-    colnames(smc_samples$Gstring)=colnames(model$interMat)[1:n_params]
+    colnames(smc_samples$Gstring) <- colnames(model$interMat)[1:n_params]
   }
 
   for (stage in 1:n_params){
 
-    print(stage)
+    print(paste("Stage: ",stage,sep=""))
 
     # Get likelihood weights
     if(n_cores>1) clusterExport(cl,varlist=ls(),envir = environment())
 
     w <- (sapply(1:n_samples, function(samp){
-      if (!is.null(datalst)){
-        (-1/2)*getMSEfuzzyDataList(cl=cl,
-                                   Bstring    = test_bString,
-                                   Gstring    = smc_samples$Gstring[samp,],
-                                   gCube      = smc_samples$gCube[samp,],
-                                   nCube      = smc_samples$nCube[samp,],
-                                   kCube      = smc_samples$kCube[samp,],
-                                   model      = model,
-                                   paramsList = paramsList,
-                                   indexList  = indexList,
-                                   sizeFac    = 0,NAFac=0,verbose = FALSE)$SSE/0.1^2
-      }else{
-        (-1/2)*getMSEfuzzy(cl=cl,
-                           Bstring    = test_bString,
-                           Gstring    = smc_samples$Gstring[samp,],
-                           gCube      = smc_samples$gCube[samp,],
-                           nCube      = smc_samples$nCube[samp,],
-                           kCube      = smc_samples$kCube[samp,],
-                           model      = model,
-                           paramsList = paramsList,
-                           indexList  = indexList,
-                           sizeFac    = 0,NAFac=0,verbose = FALSE)$SSE/0.1^2
+      (-1/2)*getMSEFuzzy(cl=cl,
+                         Bstring    = test_bString,
+                         Gstring    = smc_samples$Gstring[samp,],
+                         gCube      = smc_samples$gCube[samp,],
+                         nCube      = smc_samples$nCube[samp,],
+                         kCube      = smc_samples$kCube[samp,],
+                         inhib_inds = inhib_inds,
+                         model      = model,
+                         paramsList = paramsList,
+                         indexList  = indexList,
+                         sizeFac    = 0,NAFac=0,verbose = FALSE)$SSE/0.1^2
 
-      }
 
     }))
 
@@ -120,18 +112,19 @@ cno_smc <- function(n_samples, data, model,
     # Perturb resampled values with an MH step
 
     if(n_cores>1) clusterExport(cl,varlist=ls(),envir = environment())
-    tmp <- sapply(1:n_samples,function(samp){wrapper_to_sample_all_links(cl=cl,
+    tmp <- sapply(1:n_samples,function(samp){wrapper_to_sample_all_links(cl   = cl,
+                                                                         n_mh = n_mh,
                                                                          Bstring    = test_bString,
                                                                          Gstring    = smc_samples$Gstring[samp,],
                                                                          p_link     = p_link,
                                                                          gCube      = smc_samples$gCube[samp,],
                                                                          nCube      = smc_samples$nCube[samp,],
                                                                          kCube      = smc_samples$kCube[samp,],
+                                                                         inhib_inds = inhib_inds,
                                                                          model      = model,
                                                                          paramsList = paramsList,
                                                                          indexList  = indexList,
-                                                                         jump_size  = c(0.15,0.15,0.15),
-                                                                         datalst    = datalst)})
+                                                                         jump_size  = c(0.15,0.15,0.15))})
 
     for (samp in 1:n_samples){
       smc_samples$gCube[samp,]   <- tmp[,samp]$gCube

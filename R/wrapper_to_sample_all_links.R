@@ -1,15 +1,16 @@
 wrapper_to_sample_all_links = function(cl,
+                                       n_mh,
                                        Bstring,
                                        Gstring,
                                        p_link,
                                        gCube,
                                        nCube,
                                        kCube,
+                                       inhib_inds,
                                        model,
                                        paramsList,
                                        indexList,
-                                       jump_size,
-                                       datalst=1){
+                                       jump_size){
 
   #Last update:  April 14 2016 Biljana
   #              added a datalst switch that switches on or off the dataList usage
@@ -67,7 +68,7 @@ wrapper_to_sample_all_links = function(cl,
   #      purposes, though removed the print statements for now. When parallelized, be sure to set the
   #      outfile argument in the makeCluster command so that the print statements are returned.
   accepts <- rep(0,length(inds))
-  for (j in 1:5){
+  for (j in 1:n_mh){
     for (ind in inds){
 
       SampleOneLink = run_mcmc_one_link(cl=cl,
@@ -77,12 +78,12 @@ wrapper_to_sample_all_links = function(cl,
                                         gCube      = gCube,
                                         nCube      = nCube,
                                         kCube      = kCube,
+                                        inhib_inds = inhib_inds,
                                         model      = model,
-                                        index      = ind,
                                         paramsList = paramsList,
                                         indexList  = indexList,
                                         jump_size  = jump_size,
-                                        datalst    = datalst)
+                                        index      = ind)
 
       gCube   = SampleOneLink$gCube
       nCube   = SampleOneLink$nCube

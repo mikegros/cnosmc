@@ -1,12 +1,13 @@
 getMSEFuzzy = function(cl1     = NULL,
-                       Bstring = rep(1, length(model$reacID)+length(grep("\\+",model$reacID))),
-                       Gstring = rep(1,  length(model$reacID[-grep("\\+",model$reacID)])),
-                       gCube   = rep(4,  length(model$reacID[-grep("\\+",model$reacID)])),
-                       nCube   = rep(.5, length(model$reacID[-grep("\\+",model$reacID)])),
-                       kCube   = rep(.2, length(model$reacID[-grep("\\+",model$reacID)])),
-                       sizeFac = 0,
-                       NAFac   = 0,
-                       verbose = TRUE,
+                       Bstring    = rep(1, length(model$reacID)+length(grep("\\+",model$reacID))),
+                       Gstring    = rep(1,  length(model$reacID[-grep("\\+",model$reacID)])),
+                       gCube      = rep(4,  length(model$reacID[-grep("\\+",model$reacID)])),
+                       nCube      = rep(.5, length(model$reacID[-grep("\\+",model$reacID)])),
+                       kCube      = rep(.2, length(model$reacID[-grep("\\+",model$reacID)])),
+                       inhib_inds = NULL,
+                       sizeFac    = 0,
+                       NAFac      = 0,
+                       verbose    = TRUE,
                        model,
                        paramsList,
                        indexList){
@@ -157,53 +158,107 @@ getMSEFuzzy = function(cl1     = NULL,
     print(paste("And: sizePen <- (nDataPts * sizeFac * nInputs)/nInTot, but sizeFac = ",sizeFac))
   }
 
-  #############
-  # INTERPRET THE DISCRETE MODEL WITH LINK ON/OFF PARAMETERS ONLY
-  simList = prep4simFuzzy(model = model, paramsList = paramsList, verbose = FALSE)
+  n_params <- length(Bstring)
 
-  ####################Put model parameters into the appropriate list <--THIS IS THE FUNCTION CONDITIONAL ON THE PRESENCE/ABSENCE OF A LINK
-  simList$gCube = gCube*Bstring*Gstring # matrix of 62 rows, 2 columns
-  simList$nCube = nCube                 # matrix of 62 rows, 2 columns
-  simList$kCube = kCube                 # matrix of 62 rows, 2 columns
   #############
   # Find the indices of observed nodes that are in the active subgraph
-  active_nodes = sapply(strsplit(colnames(model$interMat)[which(Bstring==1)],split = "="),function(x){x[2]})
-  active_nodes = which(paramsList$data$namesSignals %in% active_nodes)
+  active_nodes <- sapply(strsplit(colnames(model$interMat)[which(Bstring==1)],split = "="),function(x){x[2]})
+  active_nodes <- which(paramsList$data$namesSignals %in% active_nodes)
 
-  # Replicate 4 times to attempt to avoid the stochastic failure issue observed previously
-  if(!is.null(cl1)){
-    SimResultsList = clusterCall(cl1,function() {simFuzzyT1(CNOlist = paramsList$data, model = model,
-                                                            simList = simList) })
-  }else{
-    SimResultsList = list(simFuzzyT1(CNOlist = paramsList$data, model = model,
-                                     simList = simList))
-  }
-  # NOTE: Setting all NA values to 0. This is just a hack to avoid killing particles that might otherwise be at a reasonable
-  #       place in the parameter space. Need to figure out why the NA's happen in their code. Could be more correct to kill these
-  #       particles or add a more reasonble NA penalty.
+  #############
+  # INTERPRET THE DISCRETE MODEL WITH LINK ON/OFF PARAMETERS ONLY
+  simList <- prep4simFuzzy(model = model, paramsList = paramsList, verbose = FALSE)
 
-  ################
-  SimResultsList=  array(unlist(SimResultsList), dim = c(nrow(SimResultsList[[1]]), ncol(SimResultsList[[1]]), length(SimResultsList)))
-  SimResultsList[is.na(SimResultsList)] = 0
-  # Obtain the SSEs from the simulated results and the data
-  # NOTE: Occasionally this returns NA values for some parameter settings. In these cases SimResultsList seems to give
-  #       back a blank matrix of values. May be an issue with the apply statement and the structure of the output from
-  #       "replicate", but I think it is just a result of being at bad places in parameter space. Will explore this more
-  #       to ensure that the SSE is being handled properly
-  # Since we remove the NA values from the simulated data we may as well do the same from the real data
-  Scores      <- apply(SimResultsList,3,function(x) {sum(c(x[,indexList$signals[active_nodes]] - paramsList$data$valueSignals[[2]][,active_nodes])^2,na.rm=TRUE)})
+  if(is.null(inhib_inds)){
+    ####################Put model parameters into the appropriate list <--THIS IS THE FUNCTION CONDITIONAL ON THE PRESENCE/ABSENCE OF A LINK
+    simList$gCube <- gCube*Bstring*Gstring # matrix of 62 rows, 2 columns
+    simList$nCube <- nCube                 # matrix of 62 rows, 2 columns
+    simList$kCube <- kCube                 # matrix of 62 rows, 2 columns
 
-  SimResults  =  SimResultsList[,,which.min(Scores)]
-  Score       =  min(Scores)
+    # Replicate 4 times to attempt to avoid the stochastic failure issue observed previously
+    if(!is.null(cl1)){
+      SimResultsList <- clusterCall(cl1,function() {simFuzzyT1(CNOlist = paramsList$data,
+                                                               model   = model,
+                                                               simList = simList)})
+    }else{
+      SimResultsList <- list(simFuzzyT1(CNOlist = paramsList$data,
+                                        model   = model,
+                                        simList = simList))
+    }
+    # NOTE: Setting all NA values to 0. This is just a hack to avoid killing particles that might otherwise be at a reasonable
+    #       place in the parameter space. Need to figure out why the NA's happen in their code. Could be more correct to kill these
+    #       particles or add a more reasonble NA penalty.
 
-  # Return Inf for the SSE and MSE if the SimResults matrix is bad
-  if(is.na(Score)){
-    return(list(model = model,MSE=Inf,Score=Inf,NAFac=NAFac,sizeFac=sizeFac,SimResults=SimResults,SSE=Inf))
-  }else{
-    nDataP = sum(!is.na(paramsList$data$valueSignals[[2]]))
-    MSE    = Score/nDataP
-    return(list(model = model,MSE=MSE,NAFac=NAFac,nDataP = nDataP,
-                sizeFac=sizeFac,SimResults=SimResults,
-                SSE=Score))
+    ################
+    SimResultsList <- array(unlist(SimResultsList), dim = c(nrow(SimResultsList[[1]]), ncol(SimResultsList[[1]]), length(SimResultsList)))
+    SimResultsList[is.na(SimResultsList)] = 0
+    # Obtain the SSEs from the simulated results and the data
+    # NOTE: Occasionally this returns NA values for some parameter settings. In these cases SimResultsList seems to give
+    #       back a blank matrix of values. May be an issue with the apply statement and the structure of the output from
+    #       "replicate", but I think it is just a result of being at bad places in parameter space. Will explore this more
+    #       to ensure that the SSE is being handled properly
+    # Since we remove the NA values from the simulated data we may as well do the same from the real data
+    Scores      <- apply(SimResultsList,3,function(x) {sum(c(x[,indexList$signals[active_nodes]] - paramsList$data$valueSignals[[2]][,active_nodes])^2,na.rm=TRUE)})
+
+    SimResults <- SimResultsList[,,which.min(Scores)]
+    Score      <- min(Scores)
+
+    # Return Inf for the SSE and MSE if the SimResults matrix is bad
+    if(is.na(Score)){
+      return(list(model = model,MSE=Inf,Score=Inf,NAFac=NAFac,sizeFac=sizeFac,SimResults=SimResults,SSE=Inf))
+    }else{
+      nDataP = sum(!is.na(paramsList$data$valueSignals[[2]]))
+      MSE    = Score/nDataP
+      return(list(model = model,MSE=MSE,NAFac=NAFac,nDataP = nDataP,
+                  sizeFac=sizeFac,SimResults=SimResults,
+                  SSE=Score))
+    }
+  } else {
+    ####################Put model parameters into the appropriate list <--THIS IS THE FUNCTION CONDITIONAL ON THE PRESENCE/ABSENCE OF A LINK
+    Score <- 0
+    for (ii in 1:length(inhib_inds)){
+      simList$gCube = gCube*Bstring*Gstring[1:n_params+(ii-1)*n_params]
+      simList$nCube = nCube                 # matrix of 62 rows, 2 columns
+      simList$kCube = kCube                 # matrix of 62 rows, 2 columns
+
+      # Replicate 4 times to attempt to avoid the stochastic failure issue observed previously
+      if(!is.null(cl1)){
+        SimResultsList = clusterCall(cl1,function() {simFuzzyT1(CNOlist = paramsList$data,
+                                                                model   = model,
+                                                                simList = simList)})
+      }else{
+        SimResultsList = list(simFuzzyT1(CNOlist = paramsList$data,
+                                         model   = model,
+                                         simList = simList))
+      }
+      # NOTE: Setting all NA values to 0. This is just a hack to avoid killing particles that might otherwise be at a reasonable
+      #       place in the parameter space. Need to figure out why the NA's happen in their code. Could be more correct to kill these
+      #       particles or add a more reasonble NA penalty.
+
+      ################
+      SimResultsList <- array(unlist(SimResultsList), dim = c(nrow(SimResultsList[[1]]), ncol(SimResultsList[[1]]), length(SimResultsList)))
+      SimResultsList[is.na(SimResultsList)] = 0
+      # Obtain the SSEs from the simulated results and the data
+      # NOTE: Occasionally this returns NA values for some parameter settings. In these cases SimResultsList seems to give
+      #       back a blank matrix of values. May be an issue with the apply statement and the structure of the output from
+      #       "replicate", but I think it is just a result of being at bad places in parameter space. Will explore this more
+      #       to ensure that the SSE is being handled properly
+      # Since we remove the NA values from the simulated data we may as well do the same from the real data
+      Scores      <- apply(SimResultsList,3,function(x) {sum(c(x[inhib_inds[[ii]],indexList$signals[active_nodes]] - paramsList$data$valueSignals[[2]][inhib_inds[[ii]],active_nodes])^2,na.rm=TRUE)})
+
+      SimResults <- SimResultsList[,,which.min(Scores)]
+      Score      <- min(Scores) + Score
+    }
+
+    # Return Inf for the SSE and MSE if the SimResults matrix is bad
+    if(is.na(Score)){
+      return(list(model = model,MSE=Inf,Score=Inf,NAFac=NAFac,sizeFac=sizeFac,SimResults=SimResults,SSE=Inf))
+    }else{
+      nDataP = sum(!is.na(paramsList$data$valueSignals[[2]]))
+      MSE    = Score/nDataP
+      return(list(model = model,MSE=MSE,NAFac=NAFac,nDataP = nDataP,
+                  sizeFac=sizeFac,SimResults=SimResults,
+                  SSE=Score))
+    }
   }
 }

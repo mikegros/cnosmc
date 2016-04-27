@@ -1,4 +1,13 @@
-posterior = function(cl,Bstring,Gstring,gCube,nCube,kCube,model,paramsList,indexList,datalst){
+posterior = function(cl,
+                     Bstring,
+                     Gstring,
+                     gCube,
+                     nCube,
+                     kCube,
+                     inhib_inds,
+                     model,
+                     paramsList,
+                     indexList){
 
   # Last update: April 14, 2015  Biljana
   # introduced datalst parameter that swithches off or on dataList usage
@@ -46,33 +55,19 @@ posterior = function(cl,Bstring,Gstring,gCube,nCube,kCube,model,paramsList,index
 
   if(any(c(prior_g,prior_k,prior_n) == -Inf)) return(-Inf)
 
-  if (is.null(datalst)){
-    lik = -(1/2)*getMSEfuzzy(cl,
-                             Bstring    = Bstring,
-                             Gstring    = Gstring,
-                             gCube      = gCube,
-                             nCube      = nCube,
-                             kCube      = kCube,
-                             model      = model,
-                             paramsList = paramsList,
-                             indexList  = indexList,
-                             sizeFac    = 0,
-                             NAFac      = 0,
-                             verbose    = FALSE)$SSE/0.1^2
-  }else{
-    lik = -(1/2)*getMSEfuzzyDataList(cl,
-                                     Bstring    = Bstring,
-                                     Gstring    = Gstring,
-                                     gCube      = gCube,
-                                     nCube      = nCube,
-                                     kCube      = kCube,
-                                     model      = model,
-                                     paramsList = paramsList,
-                                     indexList  = indexList,
-                                     sizeFac    = 0,
-                                     NAFac      = 0,
-                                     verbose    = FALSE)$SSE/0.1^2
-  }
+  lik = -(1/2)*getMSEFuzzy(cl,
+                           Bstring    = Bstring,
+                           Gstring    = Gstring,
+                           gCube      = gCube,
+                           nCube      = nCube,
+                           kCube      = kCube,
+                           inhib_inds = inhib_inds,
+                           model      = model,
+                           paramsList = paramsList,
+                           indexList  = indexList,
+                           sizeFac    = 0,
+                           NAFac      = 0,
+                           verbose    = FALSE)$SSE/0.1^2
 
   return(lik + prior_g + prior_k + prior_n + prior_Gstring)
 }

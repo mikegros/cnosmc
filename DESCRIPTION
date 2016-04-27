@@ -7,4 +7,4 @@ Author: Dave Campbell, Derek Bingham, Luyao Lin, Biljana Jonoska, Mike Grosskopf
 Maintainer: Mike Grosskopf <dac5@sfu.ca>
 Description: Sequential Monte Carlo (SMC) for using Bayesian inference for fitting transfer function parameters and identifying the structure of the protein flow network.
 License: GPL-2
-LazyData: TRUE
+LazyData: FALSE

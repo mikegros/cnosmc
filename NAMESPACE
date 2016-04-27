@@ -1,3 +1,4 @@
 export(cno_smc)
-importFrom(CNORfuzzy,simFuzzyT1,prep4simFuzzy)
+importFrom(CNORfuzzy,simFuzzyT1,prep4simFuzzy,defaultParametersFuzzy)
 importFrom(parallel,makeCluster,clusterCall,clusterExport,stopCluster)
+importFrom(CellNOptR, indexFinder)
