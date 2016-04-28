@@ -32,7 +32,7 @@ Logpriorg = function(gCube,lower=0,upper=1){
   ifelse(min(gCube)>=lower & max(gCube)<=upper, 0, -Inf)
 }
 ############
-Logpriorn = function(nCube,lambda=0.2){
+Logpriorn = function(nCube,lambda=2){
   # exponential prior with mean lambda is proportional to
   -sum(nCube)/lambda
 }

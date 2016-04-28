@@ -10,6 +10,7 @@ wrapper_to_sample_all_links = function(cl,
                                        model,
                                        paramsList,
                                        indexList,
+                                       sigma,
                                        jump_size){
 
   #Last update:  April 14 2016 Biljana
@@ -82,6 +83,7 @@ wrapper_to_sample_all_links = function(cl,
                                         model      = model,
                                         paramsList = paramsList,
                                         indexList  = indexList,
+                                        sigma      = sigma,
                                         jump_size  = jump_size,
                                         index      = ind)
 

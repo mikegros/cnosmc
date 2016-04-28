@@ -2,6 +2,7 @@ cno_smc <- function(n_samples, data, model,
                     init_links  = 1,
                     p_link      = 0.9,
                     n_mh        = 5,
+                    sigma       = 0.1,
                     split_inhib = FALSE,
                     n_cores     = 1,
                     diagnostics = F){
@@ -43,7 +44,7 @@ cno_smc <- function(n_samples, data, model,
   test_bString    <- rep(0,n_params)
 
   init_gCube <- 1*runif(n_params*n_samples)
-  init_nCube <- rexp(n_params*n_samples,1/0.2)
+  init_nCube <- rexp(n_params*n_samples,1/2)
   init_kCube <- 1*runif(n_params*n_samples)
 
   # Turn on some links for initial subgraph
@@ -87,7 +88,7 @@ cno_smc <- function(n_samples, data, model,
                          model      = model,
                          paramsList = paramsList,
                          indexList  = indexList,
-                         sizeFac    = 0,NAFac=0,verbose = FALSE)$SSE/0.1^2
+                         sizeFac    = 0,NAFac=0,verbose = FALSE)$SSE/sigma^2
 
 
     }))
@@ -124,6 +125,7 @@ cno_smc <- function(n_samples, data, model,
                                                                          model      = model,
                                                                          paramsList = paramsList,
                                                                          indexList  = indexList,
+                                                                         sigma      = sigma,
                                                                          jump_size  = c(0.15,0.15,0.15))})
 
     for (samp in 1:n_samples){

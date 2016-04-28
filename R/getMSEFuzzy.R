@@ -218,8 +218,8 @@ getMSEFuzzy = function(cl1     = NULL,
     Score <- 0
     for (ii in 1:length(inhib_inds)){
       simList$gCube = gCube*Bstring*Gstring[1:n_params+(ii-1)*n_params]
-      simList$nCube = nCube                 # matrix of 62 rows, 2 columns
-      simList$kCube = kCube                 # matrix of 62 rows, 2 columns
+      simList$nCube = nCube
+      simList$kCube = kCube
 
       # Replicate 4 times to attempt to avoid the stochastic failure issue observed previously
       if(!is.null(cl1)){
@@ -245,7 +245,6 @@ getMSEFuzzy = function(cl1     = NULL,
       #       to ensure that the SSE is being handled properly
       # Since we remove the NA values from the simulated data we may as well do the same from the real data
       Scores      <- apply(SimResultsList,3,function(x) {sum(c(x[inhib_inds[[ii]],indexList$signals[active_nodes]] - paramsList$data$valueSignals[[2]][inhib_inds[[ii]],active_nodes])^2,na.rm=TRUE)})
-
       SimResults <- SimResultsList[,,which.min(Scores)]
       Score      <- min(Scores) + Score
     }

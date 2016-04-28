@@ -7,7 +7,8 @@ posterior = function(cl,
                      inhib_inds,
                      model,
                      paramsList,
-                     indexList){
+                     indexList,
+                     sigma){
 
   # Last update: April 14, 2015  Biljana
   # introduced datalst parameter that swithches off or on dataList usage
@@ -67,7 +68,7 @@ posterior = function(cl,
                            indexList  = indexList,
                            sizeFac    = 0,
                            NAFac      = 0,
-                           verbose    = FALSE)$SSE/0.1^2
+                           verbose    = FALSE)$SSE/sigma^2
 
   return(lik + prior_g + prior_k + prior_n + prior_Gstring)
 }
