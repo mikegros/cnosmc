@@ -144,6 +144,16 @@ cno_smc <- function(n_samples, data, model,
     if (all(new_bString == test_bString)){
       break
     } else{
+      new_link <- which(new_bString - test_bString == 1)
+      smc_samples$gCube[,new_link] <- runif(n_samples)
+      smc_samples$nCube[,new_link] <- rexp(n_samples,1/2)
+      smc_samples$kCube[,new_link] <- runif(n_samples)
+      if (split_inhib){
+        smc_samples$Gstring[,new_link+(0:(n_models-1))*nparams] <- rbinom(n_models*n_samples,1,p_link)
+      }else{
+        smc_samples$Gstring[,new_link] <- rbinom(n_samples,1,p_link)
+      }
+
       test_bString <- new_bString
     }
   }

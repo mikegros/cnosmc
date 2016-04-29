@@ -68,7 +68,6 @@ wrapper_to_sample_all_links = function(cl,
   # MJG: Added variable for counting number of times that the jitter step is accepted for diagnostic
   #      purposes, though removed the print statements for now. When parallelized, be sure to set the
   #      outfile argument in the makeCluster command so that the print statements are returned.
-  accepts <- rep(0,length(inds))
   for (j in 1:n_mh){
     for (ind in inds){
 
@@ -91,7 +90,6 @@ wrapper_to_sample_all_links = function(cl,
       nCube   = SampleOneLink$nCube
       kCube   = SampleOneLink$kCube
       Gstring = SampleOneLink$Gstring
-      accepts[which(inds==ind)] <- accepts[which(inds==ind)] + SampleOneLink$accept
     }}
 
   list(gCube = gCube, nCube = nCube,kCube = kCube,Gstring=Gstring)

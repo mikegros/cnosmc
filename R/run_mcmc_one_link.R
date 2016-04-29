@@ -62,60 +62,103 @@ run_mcmc_one_link <- function(cl,
   #sample Gstring separately
 
   if (!is.null(inhib_inds)){
-    acceptGstring <- 0
-    Gstring_prop  <- Gstring
-    n_params      <- length(gCube)
-    n_models      <- length(inhib_inds)
+    Gstring_1  <- Gstring
+    Gstring_0  <- Gstring
+    n_params   <- length(gCube)
+    n_models   <- length(inhib_inds)
 
     for (i in (1:n_models)){
 
-      Gstring_prop[index+(i-1)*n_params] <- rbinom(1,1,Gstring[index+(i-1)*n_params]*p_link+(1-Gstring[index+(i-1)*n_params])*(1-p_link))
+      Gstring_1[index+(i-1)*n_params] <- 1
+      Gstring_0[index+(i-1)*n_params] <- 0
 
-      alpha_Gstring = posterior(cl,Bstring,Gstring_prop,gCube, nCube, kCube,inhib_inds,model,paramsList,indexList,sigma) -
-                      posterior(cl,Bstring,Gstring,     gCube, nCube, kCube,inhib_inds,model,paramsList,indexList,sigma)
+      like_Gstring_1    <- (-1/2)*getMSEFuzzy(cl=cl,
+                                              Bstring    = Bstring,
+                                              Gstring    = Gstring_1,
+                                              gCube      = gCube,
+                                              nCube      = nCube,
+                                              kCube      = kCube,
+                                              inhib_inds = inhib_inds,
+                                              model      = model,
+                                              paramsList = paramsList,
+                                              indexList  = indexList,
+                                              sizeFac    = 0,NAFac=0,verbose = FALSE)$SSE/sigma^2
+      like_Gstring_0    <- (-1/2)*getMSEFuzzy(cl=cl,
+                                              Bstring    = Bstring,
+                                              Gstring    = Gstring_0,
+                                              gCube      = gCube,
+                                              nCube      = nCube,
+                                              kCube      = kCube,
+                                              inhib_inds = inhib_inds,
+                                              model      = model,
+                                              paramsList = paramsList,
+                                              indexList  = indexList,
+                                              sizeFac    = 0,NAFac=0,verbose = FALSE)$SSE/sigma^2
 
-      if (all(!is.na(alpha_Gstring) , runif(1) < exp(alpha_Gstring))){
-        Gstring       <- Gstring_prop
-        acceptGstring <- acceptGstring + 1
-      }
-      Gstring_prop    <- Gstring
+      tmp <- max(c(like_Gstring_0,like_Gstring_1))
+      cond_p <- p_link*exp(like_Gstring_1-tmp)/(p_link*exp(like_Gstring_1-tmp)+(1-p_link)*exp(like_Gstring_0-tmp))
+      Gstring[index+(i-1)*n_params] <- rbinom(1,1,cond_p)
     }
   }else{
-    acceptGstring       <- 0
-    Gstring_prop        <- Gstring
-    Gstring_prop[index] <- rbinom(1,1,Gstring[index]*p_link+(1-Gstring[index])*(1-p_link))
+    Gstring_1  <- Gstring
+    Gstring_0  <- Gstring
+    n_params   <- length(gCube)
+    n_models   <- length(inhib_inds)
 
-    alpha_Gstring = posterior(cl,Bstring,Gstring_prop,gCube,nCube,kCube,inhib_inds,model,paramsList,indexList,sigma) -
-                    posterior(cl,Bstring,Gstring,     gCube,nCube,kCube,inhib_inds,model,paramsList,indexList,sigma)
 
-    if (all(!is.na(alpha_Gstring) , runif(1) < exp(alpha_Gstring))){
-      Gstring       <- Gstring_prop
-      acceptGstring <- acceptGstring + 1
-    }
-    Gstring_prop    <- Gstring
+    Gstring_1[index] <- 1
+    Gstring_0[index] <- 0
+
+    like_Gstring_1    <- (-1/2)*getMSEFuzzy(cl=cl,
+                                            Bstring    = Bstring,
+                                            Gstring    = Gstring_1,
+                                            gCube      = gCube,
+                                            nCube      = nCube,
+                                            kCube      = kCube,
+                                            inhib_inds = inhib_inds,
+                                            model      = model,
+                                            paramsList = paramsList,
+                                            indexList  = indexList,
+                                            sizeFac    = 0,NAFac=0,verbose = FALSE)$SSE/sigma^2
+    like_Gstring_0    <- (-1/2)*getMSEFuzzy(cl=cl,
+                                            Bstring    = Bstring,
+                                            Gstring    = Gstring_0,
+                                            gCube      = gCube,
+                                            nCube      = nCube,
+                                            kCube      = kCube,
+                                            inhib_inds = inhib_inds,
+                                            model      = model,
+                                            paramsList = paramsList,
+                                            indexList  = indexList,
+                                            sizeFac    = 0,NAFac=0,verbose = FALSE)$SSE/sigma^2
+    tmp <- max(c(like_Gstring_0,like_Gstring_1))
+    cond_p <- p_link*exp(like_Gstring_1-tmp)/(p_link*exp(like_Gstring_1-tmp)+(1-p_link)*exp(like_Gstring_0-tmp))
+    Gstring[index] <- rbinom(1,1,cond_p)
   }
+  current_post <- posterior(cl,Bstring,Gstring,gCube,nCube,kCube,inhib_inds,model,paramsList,indexList,sigma)
 
   # sample g
   gCube_prop        <- gCube
   gCube_prop[index] <- rnorm(1, gCube[index], jump_size[1])
 
-  alpha_g <- posterior(cl,Bstring,Gstring,gCube_prop,nCube,kCube,inhib_inds,model,paramsList,indexList,sigma) -
-             posterior(cl,Bstring,Gstring,gCube,     nCube,kCube,inhib_inds,model,paramsList,indexList,sigma)
-
+  prop_post <- posterior(cl,Bstring,Gstring,gCube_prop,nCube,kCube,inhib_inds,model,paramsList,indexList,sigma)
+  alpha_g   <- prop_post - current_post
 
   if (all(!is.na(alpha_g) , runif(1) < exp(alpha_g))){
-    gCube <- gCube_prop
+    gCube        <- gCube_prop
+    current_post <- prop_post
   }
 
   # sample k
   kCube_prop        <- kCube
   kCube_prop[index] <- rnorm(1, kCube[index], jump_size[2])
 
-  alpha_k <- posterior(cl,Bstring,Gstring,gCube,nCube,kCube_prop,inhib_inds,model,paramsList,indexList,sigma) -
-             posterior(cl,Bstring,Gstring,gCube,nCube,kCube,     inhib_inds,model,paramsList,indexList,sigma)
+  prop_post <- posterior(cl,Bstring,Gstring,gCube,nCube,kCube_prop,inhib_inds,model,paramsList,indexList,sigma)
+  alpha_k   <- prop_post - current_post
 
   if (all(!is.na(alpha_k) , runif(1) < exp(alpha_k))){
     kCube <- kCube_prop
+    current_post <- prop_post
   }
 
   # sample n
@@ -124,14 +167,15 @@ run_mcmc_one_link <- function(cl,
 
   nCube_prop[index] <- exp(log(nCube[index]) + delta)
 
-  alpha_n <- posterior(cl,Bstring,Gstring,gCube,nCube_prop,kCube,inhib_inds,model,paramsList,indexList,sigma) -
-             posterior(cl,Bstring,Gstring,gCube,nCube,     kCube,inhib_inds,model,paramsList,indexList,sigma) +
-             dlnorm(nCube, log(nCube_prop), jump_size[3], log=T) -
-             dlnorm(nCube_prop, log(nCube), jump_size[3], log=T)
+  prop_post <- posterior(cl,Bstring,Gstring,gCube,nCube_prop,kCube,inhib_inds,model,paramsList,indexList,sigma)
+  alpha_n   <- prop_post - current_post +
+               dlnorm(nCube, log(nCube_prop), jump_size[3], log=T) -
+               dlnorm(nCube_prop, log(nCube), jump_size[3], log=T)
 
   if (all(!is.na(alpha_n) , runif(1) < exp(alpha_n))){
     nCube <- nCube_prop
+    current_post <- prop_post
   }
 
-  list(gCube=gCube,kCube=kCube,nCube=nCube,Gstring=Gstring,acceptGstring=acceptGstring)
+  list(gCube=gCube,kCube=kCube,nCube=nCube,Gstring=Gstring)
 }
