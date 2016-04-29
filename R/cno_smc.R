@@ -149,7 +149,7 @@ cno_smc <- function(n_samples, data, model,
       smc_samples$nCube[,new_link] <- rexp(n_samples,1/2)
       smc_samples$kCube[,new_link] <- runif(n_samples)
       if (split_inhib){
-        smc_samples$Gstring[,new_link+(0:(n_models-1))*nparams] <- rbinom(n_models*n_samples,1,p_link)
+        smc_samples$Gstring[,new_link+(0:(n_models-1))*n_params] <- rbinom(n_models*n_samples,1,p_link)
       }else{
         smc_samples$Gstring[,new_link] <- rbinom(n_samples,1,p_link)
       }
