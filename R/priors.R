@@ -24,7 +24,7 @@
 
 ############
 LogpriorGstring = function(initGstring,p=rep(.9,length(initGstring))){
-  initGstring*log(p) + (1-initGstring)*log(1-p)
+  sum(initGstring*log(p) + (1-initGstring)*log(1-p))
 }
 ############
 Logpriorg = function(gCube,lower=0,upper=1){

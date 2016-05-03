@@ -7,6 +7,7 @@ wrapper_to_sample_all_links = function(cl,
                                        nCube,
                                        kCube,
                                        inhib_inds,
+                                       inhib_links,
                                        model,
                                        paramsList,
                                        indexList,
@@ -62,6 +63,8 @@ wrapper_to_sample_all_links = function(cl,
   #===============================================================
 
   inds <- which(Bstring==1)
+  tmp  <- inds %in% inhib_links
+  inds <- inds[!tmp]
 
   #sample the active links only
 
@@ -72,19 +75,20 @@ wrapper_to_sample_all_links = function(cl,
     for (ind in inds){
 
       SampleOneLink = run_mcmc_one_link(cl=cl,
-                                        Bstring    = Bstring,
-                                        Gstring    = Gstring,
-                                        p_link     = p_link,
-                                        gCube      = gCube,
-                                        nCube      = nCube,
-                                        kCube      = kCube,
-                                        inhib_inds = inhib_inds,
-                                        model      = model,
-                                        paramsList = paramsList,
-                                        indexList  = indexList,
-                                        sigma      = sigma,
-                                        jump_size  = jump_size,
-                                        index      = ind)
+                                        Bstring     = Bstring,
+                                        Gstring     = Gstring,
+                                        p_link      = p_link,
+                                        gCube       = gCube,
+                                        nCube       = nCube,
+                                        kCube       = kCube,
+                                        inhib_inds  = inhib_inds,
+                                        inhib_links = inhib_links,
+                                        model       = model,
+                                        paramsList  = paramsList,
+                                        indexList   = indexList,
+                                        sigma       = sigma,
+                                        jump_size   = jump_size,
+                                        index       = ind)
 
       gCube   = SampleOneLink$gCube
       nCube   = SampleOneLink$nCube

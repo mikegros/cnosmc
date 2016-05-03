@@ -2,6 +2,7 @@ cno_smc <- function(n_samples, data, model,
                     init_links  = 1,
                     p_link      = 0.9,
                     n_mh        = 5,
+                    jump_size   = rep(0.15,3),
                     sigma       = 0.1,
                     split_inhib = FALSE,
                     n_cores     = 1,
@@ -50,6 +51,10 @@ cno_smc <- function(n_samples, data, model,
   # Turn on some links for initial subgraph
   test_bString[c(init_links)] <- 1
 
+  # Turn on all links into inhibitors
+  inhib_links <- which(unlist(lapply(strsplit(model$reacID,'\\='),function(x) {any(data$namesInhibitors == x[2])} )))
+  test_bString[inhib_links] <- 1
+
   if (split_inhib){
     n_models     <- length(inhib_inds)
     init_Gstring <- rbinom(n_models*n_params*n_samples,1,p_link)
@@ -63,6 +68,13 @@ cno_smc <- function(n_samples, data, model,
   smc_samples$nCube   <- matrix(init_nCube,   ncol = n_params,          nrow = n_samples, byrow = TRUE)
   smc_samples$kCube   <- matrix(init_kCube,   ncol = n_params,          nrow = n_samples, byrow = TRUE)
   smc_samples$Gstring <- matrix(init_Gstring, ncol = n_models*n_params, nrow = n_samples, byrow = TRUE)
+
+  # Fix the parameters for links into inhibitors
+  #    Values for n,k found by optimizing closeness of transfer function to f(x) = x
+  smc_samples$gCube[,inhib_links]   <- 1
+  smc_samples$nCube[,inhib_links]   <- 1.001858
+  smc_samples$kCube[,inhib_links]   <- 339.419080
+  smc_samples$Gstring[,inhib_links] <- 1
 
   if (split_inhib){
     colnames(smc_samples$Gstring) <- rep(colnames(model$interMat)[1:n_params],n_models)
@@ -115,18 +127,19 @@ cno_smc <- function(n_samples, data, model,
     if(n_cores>1) clusterExport(cl,varlist=ls(),envir = environment())
     tmp <- sapply(1:n_samples,function(samp){wrapper_to_sample_all_links(cl   = cl,
                                                                          n_mh = n_mh,
-                                                                         Bstring    = test_bString,
-                                                                         Gstring    = smc_samples$Gstring[samp,],
-                                                                         p_link     = p_link,
-                                                                         gCube      = smc_samples$gCube[samp,],
-                                                                         nCube      = smc_samples$nCube[samp,],
-                                                                         kCube      = smc_samples$kCube[samp,],
-                                                                         inhib_inds = inhib_inds,
-                                                                         model      = model,
-                                                                         paramsList = paramsList,
-                                                                         indexList  = indexList,
-                                                                         sigma      = sigma,
-                                                                         jump_size  = c(0.15,0.15,0.15))})
+                                                                         Bstring     = test_bString,
+                                                                         Gstring     = smc_samples$Gstring[samp,],
+                                                                         p_link      = p_link,
+                                                                         gCube       = smc_samples$gCube[samp,],
+                                                                         nCube       = smc_samples$nCube[samp,],
+                                                                         kCube       = smc_samples$kCube[samp,],
+                                                                         inhib_inds  = inhib_inds,
+                                                                         inhib_links = inhib_links,
+                                                                         model       = model,
+                                                                         paramsList  = paramsList,
+                                                                         indexList   = indexList,
+                                                                         sigma       = sigma,
+                                                                         jump_size   = jump_size)})
 
     for (samp in 1:n_samples){
       smc_samples$gCube[samp,]   <- tmp[,samp]$gCube

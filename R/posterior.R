@@ -5,6 +5,7 @@ posterior = function(cl,
                      nCube,
                      kCube,
                      inhib_inds,
+                     inhib_links,
                      model,
                      paramsList,
                      indexList,
@@ -49,10 +50,18 @@ posterior = function(cl,
 
   #===============================================================
 
-  prior_g       = Logpriorg(gCube)
-  prior_k       = Logpriork(kCube)
-  prior_n       = Logpriorn(nCube)
-  prior_Gstring = LogpriorGstring(Gstring)
+  prior_g       = Logpriorg(gCube[-inhib_links])
+  prior_k       = Logpriork(kCube[-inhib_links])
+  prior_n       = Logpriorn(nCube[-inhib_links])
+
+  tmp <- length(Gstring)/length(gCube)
+  if (tmp >1){
+    Gstring_tmp <- Gstring
+    for(jj in (tmp-1):0) Gstring_tmp <- Gstring_tmp[-inhib_links+jj*length(gCube)]
+    prior_Gstring = LogpriorGstring(Gstring_tmp)
+  } else {
+    prior_Gstring = LogpriorGstring(Gstring[-inhib_links])
+  }
 
   if(any(c(prior_g,prior_k,prior_n) == -Inf)) return(-Inf)
 
