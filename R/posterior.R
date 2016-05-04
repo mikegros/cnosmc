@@ -49,19 +49,12 @@ posterior = function(cl,
 
 
   #===============================================================
+  n_inhib       = length(inhib_links)/(length(Gstring)/length(gCube))
 
-  prior_g       = Logpriorg(gCube[-inhib_links])
-  prior_k       = Logpriork(kCube[-inhib_links])
-  prior_n       = Logpriorn(nCube[-inhib_links])
-
-  tmp <- length(Gstring)/length(gCube)
-  if (tmp >1){
-    Gstring_tmp <- Gstring
-    for(jj in (tmp-1):0) Gstring_tmp <- Gstring_tmp[-inhib_links+jj*length(gCube)]
-    prior_Gstring = LogpriorGstring(Gstring_tmp)
-  } else {
-    prior_Gstring = LogpriorGstring(Gstring[-inhib_links])
-  }
+  prior_g       = Logpriorg(gCube[-inhib_links[1:n_inhib]])
+  prior_k       = Logpriork(kCube[-inhib_links[1:n_inhib]])
+  prior_n       = Logpriorn(nCube[-inhib_links[1:n_inhib]])
+  prior_Gstring = LogpriorGstring(Gstring[-inhib_links])
 
   if(any(c(prior_g,prior_k,prior_n) == -Inf)) return(-Inf)
 
