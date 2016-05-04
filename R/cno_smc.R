@@ -22,7 +22,10 @@ cno_smc <- function(n_samples, data, model,
     if (ncol(data$valueInhibitors) == 1){
       inhib_inds <- lapply(inhib_settings, function(x) which(data$valueInhibitors == x))
     } else {
-      inhib_inds <- apply(inhib_settings,1,function(y) which(apply(data$valueInhibitors,1,function(x) all(x==y))))
+      inhib_inds <- list()
+      for (ii in 1:nrow(inhib_settings)){
+        inhib_inds[[ii]] <- which(apply(data$valueInhibitors,1,function(x) all(x==inhib_settings[ii,])))
+      }
     }
   }
 
@@ -56,10 +59,13 @@ cno_smc <- function(n_samples, data, model,
   n_inhib <- length(inhib_links)
   test_bString[inhib_links] <- 1
 
+
   if (split_inhib){
     n_models     <- length(inhib_inds)
     init_Gstring <- rbinom(n_models*n_params*n_samples,1,p_link)
-    for (jj in 2:n_models) inhib_links <- c(inhib_links,inhib_links+(jj-1)*n_params)
+    tmp          <- inhib_links
+    inhib_links  <- c()
+    for (jj in 1:n_models) inhib_links <- c(inhib_links,tmp+(jj-1)*n_params)
   }else{
     n_models     <- 1
     init_Gstring <- rbinom(n_params*n_samples,1,p_link)
