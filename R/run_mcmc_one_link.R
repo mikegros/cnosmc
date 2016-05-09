@@ -136,13 +136,13 @@ run_mcmc_one_link <- function(cl,
     cond_p <- p_link*exp(like_Gstring_1-tmp)/(p_link*exp(like_Gstring_1-tmp)+(1-p_link)*exp(like_Gstring_0-tmp))
     Gstring[index] <- rbinom(1,1,cond_p)
   }
-  current_post <- posterior(cl,Bstring,Gstring,gCube,nCube,kCube,inhib_inds,inhib_links,model,paramsList,indexList,sigma)
+  current_post <- posterior(cl,Bstring,Gstring,gCube,nCube,kCube,p_link,inhib_inds,inhib_links,model,paramsList,indexList,sigma)
 
   # sample g
   gCube_prop        <- gCube
   gCube_prop[index] <- rnorm(1, gCube[index], jump_size[1])
 
-  prop_post <- posterior(cl,Bstring,Gstring,gCube_prop,nCube,kCube,inhib_inds,inhib_links,model,paramsList,indexList,sigma)
+  prop_post <- posterior(cl,Bstring,Gstring,gCube_prop,nCube,kCube,p_link,inhib_inds,inhib_links,model,paramsList,indexList,sigma)
   alpha_g   <- prop_post - current_post
 
   if (all(!is.na(alpha_g) , runif(1) < exp(alpha_g))){
@@ -154,7 +154,7 @@ run_mcmc_one_link <- function(cl,
   kCube_prop        <- kCube
   kCube_prop[index] <- rnorm(1, kCube[index], jump_size[2])
 
-  prop_post <- posterior(cl,Bstring,Gstring,gCube,nCube,kCube_prop,inhib_inds,inhib_links,model,paramsList,indexList,sigma)
+  prop_post <- posterior(cl,Bstring,Gstring,gCube,nCube,kCube_prop,p_link,inhib_inds,inhib_links,model,paramsList,indexList,sigma)
   alpha_k   <- prop_post - current_post
 
   if (all(!is.na(alpha_k) , runif(1) < exp(alpha_k))){
@@ -168,7 +168,7 @@ run_mcmc_one_link <- function(cl,
 
   nCube_prop[index] <- exp(log(nCube[index]) + delta)
 
-  prop_post <- posterior(cl,Bstring,Gstring,gCube,nCube_prop,kCube,inhib_inds,inhib_links,model,paramsList,indexList,sigma)
+  prop_post <- posterior(cl,Bstring,Gstring,gCube,nCube_prop,kCube,p_link,inhib_inds,inhib_links,model,paramsList,indexList,sigma)
   alpha_n   <- prop_post - current_post +
                dlnorm(nCube, log(nCube_prop), jump_size[3], log=T) -
                dlnorm(nCube_prop, log(nCube), jump_size[3], log=T)
