@@ -2,6 +2,7 @@ cno_smc <- function(n_samples, data, model,
                     init_links  = 1,
                     p_link      = 0.9,
                     n_mh        = 5,
+                    jump_size   = rep(0.15,3),
                     sigma       = 0.1,
                     split_inhib = FALSE,
                     n_cores     = 1,
@@ -126,7 +127,7 @@ cno_smc <- function(n_samples, data, model,
                                                                          paramsList = paramsList,
                                                                          indexList  = indexList,
                                                                          sigma      = sigma,
-                                                                         jump_size  = c(0.15,0.15,0.15))})
+                                                                         jump_size  = jump_size)})
 
     for (samp in 1:n_samples){
       smc_samples$gCube[samp,]   <- tmp[,samp]$gCube

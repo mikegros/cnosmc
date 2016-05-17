@@ -92,5 +92,5 @@ wrapper_to_sample_all_links = function(cl,
       Gstring = SampleOneLink$Gstring
     }}
 
-  list(gCube = gCube, nCube = nCube,kCube = kCube,Gstring=Gstring)
+  list(gCube = gCube, nCube = nCube, kCube = kCube, Gstring = Gstring)
 }

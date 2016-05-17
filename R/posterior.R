@@ -4,6 +4,7 @@ posterior = function(cl,
                      gCube,
                      nCube,
                      kCube,
+                     p_link,
                      inhib_inds,
                      model,
                      paramsList,
@@ -52,7 +53,7 @@ posterior = function(cl,
   prior_g       = Logpriorg(gCube)
   prior_k       = Logpriork(kCube)
   prior_n       = Logpriorn(nCube)
-  prior_Gstring = LogpriorGstring(Gstring)
+  prior_Gstring = LogpriorGstring(Gstring,p_link)
 
   if(any(c(prior_g,prior_k,prior_n) == -Inf)) return(-Inf)
 
