@@ -71,6 +71,12 @@ cno_smc <- function(n_samples, data, model,
     colnames(smc_samples$Gstring) <- colnames(model$interMat)[1:n_params]
   }
 
+  old_post <- sapply(1:n_samples, function(samp){
+    LogpriorGstring(smc_samples$Gstring[samp,],p_link) +
+      Logpriorg(smc_samples$gCube[samp,]) +
+      Logpriorn(smc_samples$nCube[samp,]) +
+      Logpriork(smc_samples$kCube[samp,]) })
+
   for (stage in 1:n_params){
 
     print(paste("Stage: ",stage,sep=""))
@@ -78,28 +84,19 @@ cno_smc <- function(n_samples, data, model,
     # Get likelihood weights
     if(n_cores>1) clusterExport(cl,varlist=ls(),envir = environment())
 
-    w <- (sapply(1:n_samples, function(samp){
-      (-1/2)*getMSEFuzzy(cl=cl,
-                         Bstring    = test_bString,
-                         Gstring    = smc_samples$Gstring[samp,],
-                         gCube      = smc_samples$gCube[samp,],
-                         nCube      = smc_samples$nCube[samp,],
-                         kCube      = smc_samples$kCube[samp,],
-                         inhib_inds = inhib_inds,
-                         model      = model,
-                         paramsList = paramsList,
-                         indexList  = indexList,
-                         sizeFac    = 0,NAFac=0,verbose = FALSE)$SSE/sigma^2
-
-
+    new_post <- (sapply(1:n_samples, function(samp){
+      posterior(cl,test_bString,
+                smc_samples$Gstring[samp,],
+                smc_samples$gCube[samp,],
+                smc_samples$nCube[samp,],
+                smc_samples$kCube[samp,],
+                p_link,inhib_inds,model,
+                paramsList,indexList,sigma)
     }))
 
+    w  <- new_post - old_post
     w  <- w-max(w)
     w  <- exp(w)
-    we <- w/sum(w)
-
-    if(diagnostics) save(we,file=paste('weights',stage,'2.RData',sep=''))
-    if(diagnostics) save(smc_samples,file=paste('smc_samples_before_resample',stage,'2.RData',sep=''))
 
     # Resample parameters using likelihood weights
     resample_inds <- sample(1:n_samples,n_samples,replace = TRUE,prob=w)
@@ -108,8 +105,6 @@ cno_smc <- function(n_samples, data, model,
     smc_samples$nCube   <- smc_samples$nCube[resample_inds,]
     smc_samples$kCube   <- smc_samples$kCube[resample_inds,]
     smc_samples$Gstring <- smc_samples$Gstring[resample_inds,]
-
-    if(diagnostics) save(smc_samples,file=paste('smc_samples_resampled_',stage,'2.RData'))
 
     # Perturb resampled values with an MH step
 
@@ -136,7 +131,15 @@ cno_smc <- function(n_samples, data, model,
       smc_samples$Gstring[samp,] <- tmp[,samp]$Gstring
     }
 
-    if(diagnostics) save(smc_samples,file=paste('smc_samples_jittered_',stage,'2.RData',sep=''))
+    old_post <- (sapply(1:n_samples, function(samp){
+      posterior(cl,test_bString,
+                    smc_samples$Gstring[samp,],
+                    smc_samples$gCube[samp,],
+                    smc_samples$nCube[samp,],
+                    smc_samples$kCube[samp,],
+                    p_link,inhib_inds,model,
+                    paramsList,indexList,sigma)
+      }))
 
     new_bString  <- add_link(init_bit_string=test_bString,links_mat=model$interMat)
 
