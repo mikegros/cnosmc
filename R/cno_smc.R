@@ -163,6 +163,7 @@ cno_smc <- function(n_samples, data, model,
   if(diagnostics) print(w/sum(w))
   if(diagnostics) save(smc_samples,file='smc_samples.RData')
 
+  smc_samples$version <- "v1.0"
   smc_samples
 }
 
