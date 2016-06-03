@@ -6,7 +6,8 @@ cno_smc <- function(n_samples, data, model,
                     sigma       = 0.1,
                     split_inhib = FALSE,
                     n_cores     = 1,
-                    diagnostics = F){
+                    diagnostics = F,
+                    excess_cluster_call = F){
   #
   # Last update: April 26, 2016, Mike Grosskopf
   #
@@ -32,10 +33,13 @@ cno_smc <- function(n_samples, data, model,
   if( n_cores > 1 ){
     # outfile arguement tells R where to write print console output (print statements, etc) when running in parallel
     # cl <- makeCluster(2,outfile="~/output_R.txt")
-    cl <- makeCluster(4)
+
+    cl <- makeCluster(n_cores)
+    cl1 <- NULL
+    if(excess_cluster_call) cl1 <- cl
     clusterCall(cl,function(x) {library(CNORfuzzy)})
   }else{
-    cl <- NULL
+    cl1 <- NULL
   }
 
 
@@ -80,19 +84,32 @@ cno_smc <- function(n_samples, data, model,
   for (stage in 1:n_params){
 
     print(paste("Stage: ",stage,sep=""))
+    if(diagnostics) save(smc_samples,file='smc_samples.RData')
 
     # Get likelihood weights
-    if(n_cores>1) clusterExport(cl,varlist=ls(),envir = environment())
+    if( n_cores > 1 ) clusterExport(cl,varlist=ls(),envir = environment())
 
-    new_post <- (sapply(1:n_samples, function(samp){
-      posterior(cl,test_bString,
-                smc_samples$Gstring[samp,],
-                smc_samples$gCube[samp,],
-                smc_samples$nCube[samp,],
-                smc_samples$kCube[samp,],
-                p_link,inhib_inds,model,
-                paramsList,indexList,sigma)
-    }))
+    if( n_cores > 1 & !excess_cluster_call ){
+      new_post <- (parSapply(cl,1:n_samples, function(samp){
+        posterior(cl1,test_bString,
+                  smc_samples$Gstring[samp,],
+                  smc_samples$gCube[samp,],
+                  smc_samples$nCube[samp,],
+                  smc_samples$kCube[samp,],
+                  p_link,inhib_inds,model,
+                  paramsList,indexList,sigma)
+      }))
+    } else {
+      new_post <- (sapply(1:n_samples, function(samp){
+        posterior(cl1,test_bString,
+                  smc_samples$Gstring[samp,],
+                  smc_samples$gCube[samp,],
+                  smc_samples$nCube[samp,],
+                  smc_samples$kCube[samp,],
+                  p_link,inhib_inds,model,
+                  paramsList,indexList,sigma)
+      }))
+    }
 
     w  <- new_post - old_post
     w  <- w-max(w)
@@ -108,21 +125,38 @@ cno_smc <- function(n_samples, data, model,
 
     # Perturb resampled values with an MH step
 
-    if(n_cores>1) clusterExport(cl,varlist=ls(),envir = environment())
-    tmp <- sapply(1:n_samples,function(samp){wrapper_to_sample_all_links(cl   = cl,
-                                                                         n_mh = n_mh,
-                                                                         Bstring    = test_bString,
-                                                                         Gstring    = smc_samples$Gstring[samp,],
-                                                                         p_link     = p_link,
-                                                                         gCube      = smc_samples$gCube[samp,],
-                                                                         nCube      = smc_samples$nCube[samp,],
-                                                                         kCube      = smc_samples$kCube[samp,],
-                                                                         inhib_inds = inhib_inds,
-                                                                         model      = model,
-                                                                         paramsList = paramsList,
-                                                                         indexList  = indexList,
-                                                                         sigma      = sigma,
-                                                                         jump_size  = jump_size)})
+    if( n_cores > 1 ) clusterExport(cl,varlist=ls(),envir = environment())
+    if( n_cores > 1 & !excess_cluster_call ){
+      tmp <- parSapply(cl,1:n_samples,function(samp){wrapper_to_sample_all_links(cl   = cl1,
+                                                                                 n_mh = n_mh,
+                                                                                 Bstring    = test_bString,
+                                                                                 Gstring    = smc_samples$Gstring[samp,],
+                                                                                 p_link     = p_link,
+                                                                                 gCube      = smc_samples$gCube[samp,],
+                                                                                 nCube      = smc_samples$nCube[samp,],
+                                                                                 kCube      = smc_samples$kCube[samp,],
+                                                                                 inhib_inds = inhib_inds,
+                                                                                 model      = model,
+                                                                                 paramsList = paramsList,
+                                                                                 indexList  = indexList,
+                                                                                 sigma      = sigma,
+                                                                                 jump_size  = jump_size)})
+    }else{
+      tmp <- sapply(1:n_samples,function(samp){wrapper_to_sample_all_links(cl   = cl1,
+                                                                           n_mh = n_mh,
+                                                                           Bstring    = test_bString,
+                                                                           Gstring    = smc_samples$Gstring[samp,],
+                                                                           p_link     = p_link,
+                                                                           gCube      = smc_samples$gCube[samp,],
+                                                                           nCube      = smc_samples$nCube[samp,],
+                                                                           kCube      = smc_samples$kCube[samp,],
+                                                                           inhib_inds = inhib_inds,
+                                                                           model      = model,
+                                                                           paramsList = paramsList,
+                                                                           indexList  = indexList,
+                                                                           sigma      = sigma,
+                                                                           jump_size  = jump_size)})
+    }
 
     for (samp in 1:n_samples){
       smc_samples$gCube[samp,]   <- tmp[,samp]$gCube
@@ -131,15 +165,28 @@ cno_smc <- function(n_samples, data, model,
       smc_samples$Gstring[samp,] <- tmp[,samp]$Gstring
     }
 
-    old_post <- (sapply(1:n_samples, function(samp){
-      posterior(cl,test_bString,
-                    smc_samples$Gstring[samp,],
-                    smc_samples$gCube[samp,],
-                    smc_samples$nCube[samp,],
-                    smc_samples$kCube[samp,],
-                    p_link,inhib_inds,model,
-                    paramsList,indexList,sigma)
+    if( n_cores > 1 ) clusterExport(cl,varlist=ls(),envir = environment())
+    if( n_cores > 1 & !excess_cluster_call){
+      old_post <- parSapply(cl,1:n_samples, function(samp){
+        posterior(cl1,test_bString,
+                  smc_samples$Gstring[samp,],
+                  smc_samples$gCube[samp,],
+                  smc_samples$nCube[samp,],
+                  smc_samples$kCube[samp,],
+                  p_link,inhib_inds,model,
+                  paramsList,indexList,sigma)
+      })
+    } else{
+      old_post <- (sapply(1:n_samples, function(samp){
+        posterior(cl1,test_bString,
+                  smc_samples$Gstring[samp,],
+                  smc_samples$gCube[samp,],
+                  smc_samples$nCube[samp,],
+                  smc_samples$kCube[samp,],
+                  p_link,inhib_inds,model,
+                  paramsList,indexList,sigma)
       }))
+    }
 
     new_bString  <- add_link(init_bit_string=test_bString,links_mat=model$interMat)
 
@@ -162,11 +209,11 @@ cno_smc <- function(n_samples, data, model,
     }
   }
 
-  if(n_cores>1) stopCluster(cl)
+  if( n_cores > 1 ) stopCluster(cl)
   if(diagnostics) print(w/sum(w))
-  if(diagnostics) save(smc_samples,file='smc_samples.RData')
 
-  smc_samples$version <- "v1.01"
+  # smc_samples$version <- "v1.01"
+  smc_samples$version <- "v_New_Parallel"
   smc_samples
 }
 
