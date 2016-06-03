@@ -80,6 +80,7 @@ cno_smc <- function(n_samples, data, model,
   for (stage in 1:n_params){
 
     print(paste("Stage: ",stage,sep=""))
+    if(diagnostics) save(smc_samples,file='smc_samples.RData')
 
     # Get likelihood weights
     if(n_cores>1) clusterExport(cl,varlist=ls(),envir = environment())
@@ -164,7 +165,6 @@ cno_smc <- function(n_samples, data, model,
 
   if(n_cores>1) stopCluster(cl)
   if(diagnostics) print(w/sum(w))
-  if(diagnostics) save(smc_samples,file='smc_samples.RData')
 
   smc_samples$version <- "v1.01"
   smc_samples
