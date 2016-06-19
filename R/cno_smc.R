@@ -20,11 +20,7 @@ cno_smc <- function(n_samples, data, model,
   if (split_inhib){
     inhib_settings <- unique(data$valueInhibitors)
 
-    if (ncol(data$valueInhibitors) == 1){
-      inhib_inds <- lapply(inhib_settings, function(x) which(data$valueInhibitors == x))
-    } else {
-      inhib_inds <- apply(inhib_settings,1,function(y) which(apply(data$valueInhibitors,1,function(x) all(x==y))))
-    }
+    inhib_inds <- apply(inhib_settings,1,function(y) which(apply(data$valueInhibitors,1,function(x) all(x==y))))
   }
 
   paramsList          <- defaultParametersFuzzy(data, model)
@@ -56,7 +52,7 @@ cno_smc <- function(n_samples, data, model,
   test_bString[c(init_links)] <- 1
 
   if (split_inhib){
-    n_models     <- length(inhib_inds)
+    n_models     <- ncol(inhib_inds)
     init_Gstring <- rbinom(n_models*n_params*n_samples,1,p_link)
   }else{
     n_models     <- 1
