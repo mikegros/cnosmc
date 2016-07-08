@@ -6,7 +6,9 @@ cno_smc <- function(n_samples, data, model,
                     sigma       = 0.1,
                     split_inhib = FALSE,
                     n_cores     = 1,
-                    diagnostics = F){
+                    diagnostics = FALSE,
+                    time_diagnostics    = FALSE,
+                    excess_cluster_call = FALSE){
   #
   # Last update: April 26, 2016, Mike Grosskopf
   #
@@ -19,10 +21,12 @@ cno_smc <- function(n_samples, data, model,
   if (split_inhib){
     inhib_settings <- unique(data$valueInhibitors)
 
-    if (ncol(data$valueInhibitors) == 1){
-      inhib_inds <- lapply(inhib_settings, function(x) which(data$valueInhibitors == x))
-    } else {
-      inhib_inds <- apply(inhib_settings,1,function(y) which(apply(data$valueInhibitors,1,function(x) all(x==y))))
+    inhib_inds <- apply(inhib_settings,1,function(y) which(apply(data$valueInhibitors,1,function(x) all(x==y))))
+
+    if(ncol(inhib_inds) == 1) {
+      tmp             <- c(inhib_inds)
+      inhib_inds      <- list()
+      inhib_inds[[1]] <- tmp
     }
   }
 
@@ -32,14 +36,20 @@ cno_smc <- function(n_samples, data, model,
   if( n_cores > 1 ){
     # outfile arguement tells R where to write print console output (print statements, etc) when running in parallel
     # cl <- makeCluster(2,outfile="~/output_R.txt")
-    cl <- makeCluster(4)
+
+    cl <- makeCluster(n_cores)
+    cl1 <- NULL
+    if(excess_cluster_call) cl1 <- cl
+
     clusterCall(cl,function(x) {library(CNORfuzzy)})
+    if(excess_cluster_call) clusterCall(cl1,function(x) {library(CNORfuzzy)})
+
   }else{
-    cl <- NULL
+    cl1 <- NULL
   }
 
 
-  findMainEffects <- unlist(lapply(strsplit(model$reacID,'\\+'),function(x) {length(x)<2} ))
+  findMainEffects <- unlist(lapply(strsplit(model$reacID,'\\+'),function(x) {length(x) < 2} ))
   n_params        <- sum(findMainEffects)
 
   test_bString    <- rep(0,n_params)
@@ -64,6 +74,8 @@ cno_smc <- function(n_samples, data, model,
   smc_samples$nCube   <- matrix(init_nCube,   ncol = n_params,          nrow = n_samples, byrow = TRUE)
   smc_samples$kCube   <- matrix(init_kCube,   ncol = n_params,          nrow = n_samples, byrow = TRUE)
   smc_samples$Gstring <- matrix(init_Gstring, ncol = n_models*n_params, nrow = n_samples, byrow = TRUE)
+  smc_samples$w       <- 1/n_samples
+
 
   if (split_inhib){
     colnames(smc_samples$Gstring) <- rep(colnames(model$interMat)[1:n_params],n_models)
@@ -83,47 +95,104 @@ cno_smc <- function(n_samples, data, model,
     if(diagnostics) save(smc_samples,file='smc_samples.RData')
 
     # Get likelihood weights
-    if(n_cores>1) clusterExport(cl,varlist=ls(),envir = environment())
+    if( n_cores > 1 ) clusterExport(cl,varlist=ls(),envir = environment())
+    if(excess_cluster_call) clusterExport(cl1,varlist=ls(),envir = environment())
 
-    new_post <- (sapply(1:n_samples, function(samp){
-      posterior(cl,test_bString,
-                smc_samples$Gstring[samp,],
-                smc_samples$gCube[samp,],
-                smc_samples$nCube[samp,],
-                smc_samples$kCube[samp,],
-                p_link,inhib_inds,model,
-                paramsList,indexList,sigma)
-    }))
+    if(time_diagnostics) t1 <- proc.time()
+    if( n_cores > 1 & !excess_cluster_call ){
+      new_post <- (parSapply(cl,1:n_samples, function(samp){
+                                            posterior(cl         = cl1,
+                                                      Bstring    = test_bString,
+                                                      Gstring    = smc_samples$Gstring[samp,],
+                                                      gCube      = smc_samples$gCube[samp,],
+                                                      nCube      = smc_samples$nCube[samp,],
+                                                      kCube      = smc_samples$kCube[samp,],
+                                                      p_link     = p_link,
+                                                      inhib_inds = inhib_inds,
+                                                      model      = model,
+                                                      paramsList = paramsList,
+                                                      indexList  = indexList,
+                                                      sigma      = sigma)
+      }))
+    } else {
+      new_post <- (sapply(1:n_samples, function(samp){
+                                                posterior(cl         = cl1,
+                                                          Bstring    = test_bString,
+                                                          Gstring    = smc_samples$Gstring[samp,],
+                                                          gCube      = smc_samples$gCube[samp,],
+                                                          nCube      = smc_samples$nCube[samp,],
+                                                          kCube      = smc_samples$kCube[samp,],
+                                                          p_link     = p_link,
+                                                          inhib_inds = inhib_inds,
+                                                          model      = model,
+                                                          paramsList = paramsList,
+                                                          indexList  = indexList,
+                                                          sigma      = sigma)
+      }))
+    }
 
     w  <- new_post - old_post
-    w  <- w-max(w)
+    w  <- w - max(w)
     w  <- exp(w)
+    w  <- w/sum(w)
+
+    if(time_diagnostics) t1 <- proc.time() - t1
+    if(time_diagnostics) print(paste('Time elapsed for calculating weights:',round(t1[3]/60,3),'minutes'))
+
+    ESS <- 1/(sum(w^2))
+    monitorESS <- list(ESS,n_samples/2)
+    if(diagnostics) print(paste('ESS:',monitorESS))
+    if(diagnostics) save(monitorESS,file=paste('ESS',stage,'.RData'))
 
     # Resample parameters using likelihood weights
+    if(time_diagnostics) t2 <- proc.time()
     resample_inds <- sample(1:n_samples,n_samples,replace = TRUE,prob=w)
 
     smc_samples$gCube   <- smc_samples$gCube[resample_inds,]
     smc_samples$nCube   <- smc_samples$nCube[resample_inds,]
     smc_samples$kCube   <- smc_samples$kCube[resample_inds,]
     smc_samples$Gstring <- smc_samples$Gstring[resample_inds,]
+    smc_samples$w       <- w
 
+    if(time_diagnostics) t2 <- proc.time() - t2
+    if(time_diagnostics) print(paste('Time elapsed for resampling:',round(t2[3]/60,3),'minutes'))
     # Perturb resampled values with an MH step
+    if(time_diagnostics) t3 <- proc.time()
+    if( n_cores > 1 ) clusterExport(cl,varlist=ls(),envir = environment())
+    if(excess_cluster_call) clusterExport(cl1,varlist=ls(),envir = environment())
 
-    if(n_cores>1) clusterExport(cl,varlist=ls(),envir = environment())
-    tmp <- sapply(1:n_samples,function(samp){wrapper_to_sample_all_links(cl   = cl,
-                                                                         n_mh = n_mh,
-                                                                         Bstring    = test_bString,
-                                                                         Gstring    = smc_samples$Gstring[samp,],
-                                                                         p_link     = p_link,
-                                                                         gCube      = smc_samples$gCube[samp,],
-                                                                         nCube      = smc_samples$nCube[samp,],
-                                                                         kCube      = smc_samples$kCube[samp,],
-                                                                         inhib_inds = inhib_inds,
-                                                                         model      = model,
-                                                                         paramsList = paramsList,
-                                                                         indexList  = indexList,
-                                                                         sigma      = sigma,
-                                                                         jump_size  = jump_size)})
+    if (ESS < n_samples/2){
+    if( n_cores > 1 & !excess_cluster_call ){
+      tmp <- parSapply(cl,1:n_samples,function(samp){wrapper_to_sample_all_links(cl   = cl1,
+                                                                                 n_mh = n_mh,
+                                                                                 Bstring    = test_bString,
+                                                                                 Gstring    = smc_samples$Gstring[samp,],
+                                                                                 p_link     = p_link,
+                                                                                 gCube      = smc_samples$gCube[samp,],
+                                                                                 nCube      = smc_samples$nCube[samp,],
+                                                                                 kCube      = smc_samples$kCube[samp,],
+                                                                                 inhib_inds = inhib_inds,
+                                                                                 model      = model,
+                                                                                 paramsList = paramsList,
+                                                                                 indexList  = indexList,
+                                                                                 sigma      = sigma,
+                                                                                 jump_size  = jump_size)})
+    }else{
+      tmp <- sapply(1:n_samples,function(samp){wrapper_to_sample_all_links(cl   = cl1,
+                                                                           n_mh = n_mh,
+                                                                           Bstring    = test_bString,
+                                                                           Gstring    = smc_samples$Gstring[samp,],
+                                                                           p_link     = p_link,
+                                                                           gCube      = smc_samples$gCube[samp,],
+                                                                           nCube      = smc_samples$nCube[samp,],
+                                                                           kCube      = smc_samples$kCube[samp,],
+                                                                           inhib_inds = inhib_inds,
+                                                                           model      = model,
+                                                                           paramsList = paramsList,
+                                                                           indexList  = indexList,
+                                                                           sigma      = sigma,
+                                                                           jump_size  = jump_size)})
+    }
 
     for (samp in 1:n_samples){
       smc_samples$gCube[samp,]   <- tmp[,samp]$gCube
@@ -131,21 +200,48 @@ cno_smc <- function(n_samples, data, model,
       smc_samples$kCube[samp,]   <- tmp[,samp]$kCube
       smc_samples$Gstring[samp,] <- tmp[,samp]$Gstring
     }
+    }
+    if(time_diagnostics) t3 <- proc.time() - t3
+    if(time_diagnostics) print(paste('Time elapsed for MH step:',t3[3]/60))
 
-    old_post <- (sapply(1:n_samples, function(samp){
-      posterior(cl,test_bString,
-                    smc_samples$Gstring[samp,],
-                    smc_samples$gCube[samp,],
-                    smc_samples$nCube[samp,],
-                    smc_samples$kCube[samp,],
-                    p_link,inhib_inds,model,
-                    paramsList,indexList,sigma)
+
+    if(time_diagnostics) t4 <- proc.time()
+    if( n_cores > 1 ) clusterExport(cl,varlist=ls(),envir = environment())
+    if(excess_cluster_call) clusterExport(cl,varlist=ls(),envir = environment())
+
+    if( n_cores > 1 & !excess_cluster_call){
+      old_post <- parSapply(cl,1:n_samples, function(samp){
+        posterior(cl1,test_bString,
+                  smc_samples$Gstring[samp,],
+                  smc_samples$gCube[samp,],
+                  smc_samples$nCube[samp,],
+                  smc_samples$kCube[samp,],
+                  p_link,inhib_inds,model,
+                  paramsList,indexList,sigma)
+      })
+    } else{
+      old_post <- (sapply(1:n_samples, function(samp){
+        posterior(cl1,test_bString,
+                  smc_samples$Gstring[samp,],
+                  smc_samples$gCube[samp,],
+                  smc_samples$nCube[samp,],
+                  smc_samples$kCube[samp,],
+                  p_link,inhib_inds,model,
+                  paramsList,indexList,sigma)
       }))
+    }
+
+    if(time_diagnostics)  t4 <- proc.time() - t4
+    if(time_diagnostics)  print(paste('Time elapsed for calculating old posterior:',t4[3]/60))
 
     new_bString  <- add_link(init_bit_string=test_bString,links_mat=model$interMat)
+    nParamsAdded <- length(which(new_bString==1)) - length(which(test_bString==1))
+
+    if(diagnostics) print(paste('Number of parameters added:',nParamsAdded))
 
     # If the graph is complete, exit,
     #    otherwise, add a new link to the graph
+    #    and populate the newly added g, n and k with samples from their priors
     if (all(new_bString == test_bString)){
       break
     } else{
@@ -163,10 +259,13 @@ cno_smc <- function(n_samples, data, model,
     }
   }
 
-  if(n_cores>1) stopCluster(cl)
-  if(diagnostics) print(w/sum(w))
+  if( n_cores > 1 ) stopCluster(cl)
+  if(excess_cluster_call) {stopCluster(cl1)}
 
-  smc_samples$version <- "v1.01"
+  if(diagnostics) print(w)
+
+  # smc_samples$version <- "v1.01"
+  smc_samples$version <- "v_New_Parallel"
   smc_samples
 }
 
