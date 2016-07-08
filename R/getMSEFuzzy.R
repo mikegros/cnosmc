@@ -216,7 +216,7 @@ getMSEFuzzy = function(cl1     = NULL,
   } else {
     ####################Put model parameters into the appropriate list <--THIS IS THE FUNCTION CONDITIONAL ON THE PRESENCE/ABSENCE OF A LINK
     Score <- 0
-    for (ii in 1:ncol(inhib_inds)){
+    for (ii in 1:length(inhib_inds)){
       simList$gCube = gCube*Bstring*Gstring[1:n_params+(ii-1)*n_params]
       simList$nCube = nCube
       simList$kCube = kCube
@@ -244,7 +244,7 @@ getMSEFuzzy = function(cl1     = NULL,
       #       "replicate", but I think it is just a result of being at bad places in parameter space. Will explore this more
       #       to ensure that the SSE is being handled properly
       # Since we remove the NA values from the simulated data we may as well do the same from the real data
-      Scores      <- apply(SimResultsList,3,function(x) {sum(c(x[inhib_inds[,ii],indexList$signals[active_nodes]] - paramsList$data$valueSignals[[2]][inhib_inds[,ii],active_nodes])^2,na.rm=TRUE)})
+      Scores      <- apply(SimResultsList,3,function(x) {sum(c(x[inhib_inds[[ii]],indexList$signals[active_nodes]] - paramsList$data$valueSignals[[2]][inhib_inds[[ii]],active_nodes])^2,na.rm=TRUE)})
       SimResults <- SimResultsList[,,which.min(Scores)]
       Score      <- min(Scores) + Score
     }

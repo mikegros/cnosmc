@@ -65,7 +65,7 @@ run_mcmc_one_link <- function(cl,
     Gstring_1  <- Gstring
     Gstring_0  <- Gstring
     n_params   <- length(gCube)
-    n_models   <- ncol(inhib_inds)
+    n_models   <- length(inhib_inds)
 
     for (i in (1:n_models)){
 

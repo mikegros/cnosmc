@@ -22,6 +22,12 @@ cno_smc <- function(n_samples, data, model,
     inhib_settings <- unique(data$valueInhibitors)
 
     inhib_inds <- apply(inhib_settings,1,function(y) which(apply(data$valueInhibitors,1,function(x) all(x==y))))
+
+    if(ncol(inhib_inds) == 1) {
+      tmp             <- c(inhib_inds)
+      inhib_inds      <- list()
+      inhib_inds[[1]] <- tmp
+    }
   }
 
   paramsList          <- defaultParametersFuzzy(data, model)
@@ -56,7 +62,7 @@ cno_smc <- function(n_samples, data, model,
   test_bString[c(init_links)] <- 1
 
   if (split_inhib){
-    n_models     <- ncol(inhib_inds)
+    n_models     <- length(inhib_inds)
     init_Gstring <- rbinom(n_models*n_params*n_samples,1,p_link)
   }else{
     n_models     <- 1
@@ -95,23 +101,33 @@ cno_smc <- function(n_samples, data, model,
     if(time_diagnostics) t1 <- proc.time()
     if( n_cores > 1 & !excess_cluster_call ){
       new_post <- (parSapply(cl,1:n_samples, function(samp){
-                                            posterior(cl=cl1,test_bString,
-                                                      smc_samples$Gstring[samp,],
-                                                      smc_samples$gCube[samp,],
-                                                      smc_samples$nCube[samp,],
-                                                      smc_samples$kCube[samp,],
-                                                      p_link,inhib_inds,model,
-                                                      paramsList,indexList,sigma)
+                                            posterior(cl         = cl1,
+                                                      Bstring    = test_bString,
+                                                      Gstring    = smc_samples$Gstring[samp,],
+                                                      gCube      = smc_samples$gCube[samp,],
+                                                      nCube      = smc_samples$nCube[samp,],
+                                                      kCube      = smc_samples$kCube[samp,],
+                                                      p_link     = p_link,
+                                                      inhib_inds = inhib_inds,
+                                                      model      = model,
+                                                      paramsList = paramsList,
+                                                      indexList  = indexList,
+                                                      sigma      = sigma)
       }))
     } else {
       new_post <- (sapply(1:n_samples, function(samp){
-                                                posterior(cl1,test_bString,
-                                                          smc_samples$Gstring[samp,],
-                                                          smc_samples$gCube[samp,],
-                                                          smc_samples$nCube[samp,],
-                                                          smc_samples$kCube[samp,],
-                                                          p_link,inhib_inds,model,
-                                                          paramsList,indexList,sigma)
+                                                posterior(cl         = cl1,
+                                                          Bstring    = test_bString,
+                                                          Gstring    = smc_samples$Gstring[samp,],
+                                                          gCube      = smc_samples$gCube[samp,],
+                                                          nCube      = smc_samples$nCube[samp,],
+                                                          kCube      = smc_samples$kCube[samp,],
+                                                          p_link     = p_link,
+                                                          inhib_inds = inhib_inds,
+                                                          model      = model,
+                                                          paramsList = paramsList,
+                                                          indexList  = indexList,
+                                                          sigma      = sigma)
       }))
     }
 
