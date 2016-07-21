@@ -88,24 +88,23 @@ wrapper_to_sample_all_links = function(cl,
       kCube   = SampleOneLink$kCube
       Gstring = SampleOneLink$Gstring
     }
-    fuzzy_out = getMSEFuzzy(cl,
-                            Bstring    = Bstring,
-                            Gstring    = Gstring,
-                            gCube      = gCube,
-                            nCube      = nCube,
-                            kCube      = kCube,
-                            inhib_inds = inhib_inds,
-                            model      = model,
-                            paramsList = paramsList,
-                            indexList  = indexList,
-                            sizeFac    = 0,
-                            NAFac      = 0,
-                            verbose    = FALSE)
+    fuzzy_out <- getMSEFuzzy(cl,
+                             Bstring    = Bstring,
+                             Gstring    = Gstring,
+                             gCube      = gCube,
+                             nCube      = nCube,
+                             kCube      = kCube,
+                             inhib_inds = inhib_inds,
+                             model      = model,
+                             paramsList = paramsList,
+                             indexList  = indexList,
+                             sizeFac    = 0,
+                             NAFac      = 0,
+                             verbose    = FALSE)
     NN    <- fuzzy_out$nDataP
     SSE   <- fuzzy_out$SSE
     sigsq <- 1/rgamma(1.25+NN,10^-5+SSE/2/NN)
-
-    }
+  }
 
   list(gCube = gCube, nCube = nCube, kCube = kCube, Gstring = Gstring, sigsq = sigsq)
 }
