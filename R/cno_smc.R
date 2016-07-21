@@ -3,7 +3,6 @@ cno_smc <- function(n_samples, data, model,
                     p_link      = 0.9,
                     n_mh        = 5,
                     jump_size   = rep(0.15,3),
-                    sigma       = 0.1,
                     split_inhib = FALSE,
                     n_cores     = 1,
                     diagnostics = FALSE,
@@ -57,6 +56,7 @@ cno_smc <- function(n_samples, data, model,
   init_gCube <- 1*runif(n_params*n_samples)
   init_nCube <- rexp(n_params*n_samples,1/2)
   init_kCube <- 1*runif(n_params*n_samples)
+  init_sigsq <- 1/rgamma(n_samples,1.25,10^-5)
 
   # Turn on some links for initial subgraph
   test_bString[c(init_links)] <- 1
@@ -74,6 +74,7 @@ cno_smc <- function(n_samples, data, model,
   smc_samples$nCube   <- matrix(init_nCube,   ncol = n_params,          nrow = n_samples, byrow = TRUE)
   smc_samples$kCube   <- matrix(init_kCube,   ncol = n_params,          nrow = n_samples, byrow = TRUE)
   smc_samples$Gstring <- matrix(init_Gstring, ncol = n_models*n_params, nrow = n_samples, byrow = TRUE)
+  smc_samples$sigsq   <- matrix(init_sigsq,   ncol = 1,                 nrow = n_samples, byrow = TRUE)
   smc_samples$w       <- 1/n_samples
 
 
@@ -85,6 +86,7 @@ cno_smc <- function(n_samples, data, model,
 
   old_post <- sapply(1:n_samples, function(samp){
     LogpriorGstring(smc_samples$Gstring[samp,],p_link) +
+      Logpriorsigsq(smc_samples$sigsq[samp,],1.25,10^-5) +
       Logpriorg(smc_samples$gCube[samp,]) +
       Logpriorn(smc_samples$nCube[samp,]) +
       Logpriork(smc_samples$kCube[samp,]) })
@@ -107,12 +109,12 @@ cno_smc <- function(n_samples, data, model,
                                                       gCube      = smc_samples$gCube[samp,],
                                                       nCube      = smc_samples$nCube[samp,],
                                                       kCube      = smc_samples$kCube[samp,],
+                                                      sigsq      = smc_samples$sigsq[samp,],
                                                       p_link     = p_link,
                                                       inhib_inds = inhib_inds,
                                                       model      = model,
                                                       paramsList = paramsList,
-                                                      indexList  = indexList,
-                                                      sigma      = sigma)
+                                                      indexList  = indexList)
       }))
     } else {
       new_post <- (sapply(1:n_samples, function(samp){
@@ -122,12 +124,12 @@ cno_smc <- function(n_samples, data, model,
                                                           gCube      = smc_samples$gCube[samp,],
                                                           nCube      = smc_samples$nCube[samp,],
                                                           kCube      = smc_samples$kCube[samp,],
+                                                          sigsq      = smc_samples$sigsq[samp,],
                                                           p_link     = p_link,
                                                           inhib_inds = inhib_inds,
                                                           model      = model,
                                                           paramsList = paramsList,
-                                                          indexList  = indexList,
-                                                          sigma      = sigma)
+                                                          indexList  = indexList)
       }))
     }
 
@@ -152,6 +154,7 @@ cno_smc <- function(n_samples, data, model,
     smc_samples$nCube   <- smc_samples$nCube[resample_inds,]
     smc_samples$kCube   <- smc_samples$kCube[resample_inds,]
     smc_samples$Gstring <- smc_samples$Gstring[resample_inds,]
+    smc_samples$sigsq   <- smc_samples$sigsq[resample_inds,]
     smc_samples$w       <- w
 
     if(time_diagnostics) t2 <- proc.time() - t2
@@ -171,11 +174,11 @@ cno_smc <- function(n_samples, data, model,
                                                                                  gCube      = smc_samples$gCube[samp,],
                                                                                  nCube      = smc_samples$nCube[samp,],
                                                                                  kCube      = smc_samples$kCube[samp,],
+                                                                                 sigsq      = smc_samples$sigsq[samp,],
                                                                                  inhib_inds = inhib_inds,
                                                                                  model      = model,
                                                                                  paramsList = paramsList,
                                                                                  indexList  = indexList,
-                                                                                 sigma      = sigma,
                                                                                  jump_size  = jump_size)})
     }else{
       tmp <- sapply(1:n_samples,function(samp){wrapper_to_sample_all_links(cl   = cl1,
@@ -186,11 +189,11 @@ cno_smc <- function(n_samples, data, model,
                                                                            gCube      = smc_samples$gCube[samp,],
                                                                            nCube      = smc_samples$nCube[samp,],
                                                                            kCube      = smc_samples$kCube[samp,],
+                                                                           sigsq      = smc_samples$sigsq[samp,],
                                                                            inhib_inds = inhib_inds,
                                                                            model      = model,
                                                                            paramsList = paramsList,
                                                                            indexList  = indexList,
-                                                                           sigma      = sigma,
                                                                            jump_size  = jump_size)})
     }
 
@@ -198,6 +201,7 @@ cno_smc <- function(n_samples, data, model,
       smc_samples$gCube[samp,]   <- tmp[,samp]$gCube
       smc_samples$nCube[samp,]   <- tmp[,samp]$nCube
       smc_samples$kCube[samp,]   <- tmp[,samp]$kCube
+      smc_samples$sigsq[samp,]   <- tmp[,samp]$sigsq
       smc_samples$Gstring[samp,] <- tmp[,samp]$Gstring
     }
     }
@@ -211,13 +215,18 @@ cno_smc <- function(n_samples, data, model,
 
     if( n_cores > 1 & !excess_cluster_call){
       old_post <- parSapply(cl,1:n_samples, function(samp){
-        posterior(cl1,test_bString,
+        posterior(cl1,
+                  Bstring = test_bString,
                   smc_samples$Gstring[samp,],
-                  smc_samples$gCube[samp,],
-                  smc_samples$nCube[samp,],
-                  smc_samples$kCube[samp,],
-                  p_link,inhib_inds,model,
-                  paramsList,indexList,sigma)
+                  gCube   = smc_samples$gCube[samp,],
+                  nCube   = smc_samples$nCube[samp,],
+                  kCube   = smc_samples$kCube[samp,],
+                  sigsq   = smc_samples$sigsq[samp,],
+                  p_link     = p_link,
+                  inhib_inds = inhib_inds,
+                  model      = model,
+                  paramsList = paramsList,
+                  indexList  = indexList)
       })
     } else{
       old_post <- (sapply(1:n_samples, function(samp){
@@ -226,8 +235,12 @@ cno_smc <- function(n_samples, data, model,
                   smc_samples$gCube[samp,],
                   smc_samples$nCube[samp,],
                   smc_samples$kCube[samp,],
-                  p_link,inhib_inds,model,
-                  paramsList,indexList,sigma)
+                  smc_samples$sigsq[samp,],
+                  p_link     = p_link,
+                  inhib_inds = inhib_inds,
+                  model      = model,
+                  paramsList = paramsList,
+                  indexList  = indexList)
       }))
     }
 
@@ -264,7 +277,7 @@ cno_smc <- function(n_samples, data, model,
 
   if(diagnostics) print(w)
 
-  smc_samples$version <- "v1.02"
+  smc_samples$version <- "vAdd_variances"
   smc_samples
 }
 

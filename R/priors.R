@@ -42,6 +42,11 @@ Logpriork = function(kCube,lower=0,upper=1){
   ifelse(min(kCube)>=lower & max(kCube)<=upper, 0, -Inf)
 }
 ############
+Logpriorsigsq = function(sigsq,alpha,beta){
+  # inverse gamma prior
+  -dgamma(sigsq,alpha,beta,log = TRUE)
+}
+############
 
 
 

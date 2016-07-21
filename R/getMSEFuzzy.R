@@ -207,7 +207,7 @@ getMSEFuzzy = function(cl1     = NULL,
     if(is.na(Score)){
       return(list(model = model,MSE=Inf,Score=Inf,NAFac=NAFac,sizeFac=sizeFac,SimResults=SimResults,SSE=Inf))
     }else{
-      nDataP = sum(!is.na(paramsList$data$valueSignals[[2]]))
+      nDataP = sum(!is.na(paramsList$data$valueSignals[[2]][,active_nodes]))
       MSE    = Score/nDataP
       return(list(model = model,MSE=MSE,NAFac=NAFac,nDataP = nDataP,
                   sizeFac=sizeFac,SimResults=SimResults,
@@ -253,7 +253,7 @@ getMSEFuzzy = function(cl1     = NULL,
     if(is.na(Score)){
       return(list(model = model,MSE=Inf,Score=Inf,NAFac=NAFac,sizeFac=sizeFac,SimResults=SimResults,SSE=Inf))
     }else{
-      nDataP = sum(!is.na(paramsList$data$valueSignals[[2]]))
+      nDataP = sum(!is.na(paramsList$data$valueSignals[[2]][inhib_inds[[ii]],active_nodes]))
       MSE    = Score/nDataP
       return(list(model = model,MSE=MSE,NAFac=NAFac,nDataP = nDataP,
                   sizeFac=sizeFac,SimResults=SimResults,

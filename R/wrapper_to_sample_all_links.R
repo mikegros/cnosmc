@@ -6,11 +6,11 @@ wrapper_to_sample_all_links = function(cl,
                                        gCube,
                                        nCube,
                                        kCube,
+                                       sigsq,
                                        inhib_inds,
                                        model,
                                        paramsList,
                                        indexList,
-                                       sigma,
                                        jump_size){
 
   #Last update:  April 14 2016 Biljana
@@ -65,9 +65,6 @@ wrapper_to_sample_all_links = function(cl,
 
   #sample the active links only
 
-  # MJG: Added variable for counting number of times that the jitter step is accepted for diagnostic
-  #      purposes, though removed the print statements for now. When parallelized, be sure to set the
-  #      outfile argument in the makeCluster command so that the print statements are returned.
   for (j in 1:n_mh){
     for (ind in inds){
 
@@ -78,11 +75,11 @@ wrapper_to_sample_all_links = function(cl,
                                         gCube      = gCube,
                                         nCube      = nCube,
                                         kCube      = kCube,
+                                        sigsq      = sigsq,
                                         inhib_inds = inhib_inds,
                                         model      = model,
                                         paramsList = paramsList,
                                         indexList  = indexList,
-                                        sigma      = sigma,
                                         jump_size  = jump_size,
                                         index      = ind)
 
@@ -90,7 +87,25 @@ wrapper_to_sample_all_links = function(cl,
       nCube   = SampleOneLink$nCube
       kCube   = SampleOneLink$kCube
       Gstring = SampleOneLink$Gstring
-    }}
+    }
+    fuzzy_out = getMSEFuzzy(cl,
+                            Bstring    = Bstring,
+                            Gstring    = Gstring,
+                            gCube      = gCube,
+                            nCube      = nCube,
+                            kCube      = kCube,
+                            inhib_inds = inhib_inds,
+                            model      = model,
+                            paramsList = paramsList,
+                            indexList  = indexList,
+                            sizeFac    = 0,
+                            NAFac      = 0,
+                            verbose    = FALSE)
+    NN    <- fuzzy_out$nDataP
+    SSE   <- fuzzy_out$SSE
+    sigsq <- 1/rgamma(1.25+NN,10^-5+SSE/2/NN)
 
-  list(gCube = gCube, nCube = nCube, kCube = kCube, Gstring = Gstring)
+    }
+
+  list(gCube = gCube, nCube = nCube, kCube = kCube, Gstring = Gstring, sigsq = sigsq)
 }

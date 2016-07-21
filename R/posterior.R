@@ -4,12 +4,12 @@ posterior = function(cl,
                      gCube,
                      nCube,
                      kCube,
+                     sigsq,
                      p_link,
                      inhib_inds,
                      model,
                      paramsList,
-                     indexList,
-                     sigma){
+                     indexList){
 
   # Last update: April 14, 2015  Biljana
   # introduced datalst parameter that swithches off or on dataList usage
@@ -53,9 +53,10 @@ posterior = function(cl,
   prior_g       = Logpriorg(gCube)
   prior_k       = Logpriork(kCube)
   prior_n       = Logpriorn(nCube)
+  prior_sigsq   = Logpriorsigsq(sigsq,1.25,10^-5)
   prior_Gstring = LogpriorGstring(Gstring,p_link)
 
-  if(any(c(prior_g,prior_k,prior_n) == -Inf)) return(-Inf)
+  if(any(c(prior_g,prior_k,prior_n,prior_sigsq) == -Inf)) return(-Inf)
 
   lik = -(1/2)*getMSEFuzzy(cl,
                            Bstring    = Bstring,
@@ -69,7 +70,7 @@ posterior = function(cl,
                            indexList  = indexList,
                            sizeFac    = 0,
                            NAFac      = 0,
-                           verbose    = FALSE)$SSE/sigma^2
+                           verbose    = FALSE)$SSE/sigsq
 
-  return(lik + prior_g + prior_k + prior_n + prior_Gstring)
+  return(lik + prior_g + prior_k + prior_n + prior_sigsq + prior_Gstring)
 }
