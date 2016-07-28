@@ -44,7 +44,7 @@ Logpriork = function(kCube,lower=0,upper=1){
 ############
 Logpriorsigsq = function(sigsq,alpha,beta){
   # inverse gamma prior
-  -dgamma(sigsq,alpha,beta,log = TRUE)
+  -dgamma(1/sigsq,alpha,beta,log = TRUE)
 }
 ############
 

@@ -154,7 +154,7 @@ cno_smc <- function(n_samples, data, model,
     smc_samples$nCube   <- smc_samples$nCube[resample_inds,]
     smc_samples$kCube   <- smc_samples$kCube[resample_inds,]
     smc_samples$Gstring <- smc_samples$Gstring[resample_inds,]
-    smc_samples$sigsq   <- smc_samples$sigsq[resample_inds,]
+    smc_samples$sigsq   <- smc_samples$sigsq[resample_inds,,drop=FALSE]
     smc_samples$w       <- w
 
     if(time_diagnostics) t2 <- proc.time() - t2

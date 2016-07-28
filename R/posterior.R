@@ -70,7 +70,7 @@ posterior = function(cl,
                            indexList  = indexList,
                            sizeFac    = 0,
                            NAFac      = 0,
-                           verbose    = FALSE)$SSE/sigsq
+                           verbose    = FALSE)$MSE/sigsq
 
   return(lik + prior_g + prior_k + prior_n + prior_sigsq + prior_Gstring)
 }
