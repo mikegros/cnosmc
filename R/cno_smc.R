@@ -248,7 +248,14 @@ cno_smc <- function(n_samples, data, model,
     if(time_diagnostics)  t4 <- proc.time() - t4
     if(time_diagnostics)  print(paste('Time elapsed for calculating old posterior:',t4[3]/60))
 
-    new_bString  <- add_link(init_bit_string=test_bString,links_mat=model$interMat)
+    # new_bString  <- add_link(init_bit_string=test_bString,links_mat=model$interMat)
+
+    # Adding steps deterministically for now:
+    schedule_add <- c(1)
+    new_bString  <- test_bString
+
+    new_bString[schedule_add] <- 1
+
     nParamsAdded <- length(which(new_bString==1)) - length(which(test_bString==1))
 
     if(diagnostics) print(paste('Number of parameters added:',nParamsAdded))
@@ -260,13 +267,15 @@ cno_smc <- function(n_samples, data, model,
       break
     } else{
       new_link <- which(new_bString - test_bString == 1)
-      smc_samples$gCube[,new_link] <- runif(n_samples)
-      smc_samples$nCube[,new_link] <- rexp(n_samples,1/2)
-      smc_samples$kCube[,new_link] <- runif(n_samples)
-      if (split_inhib){
-        smc_samples$Gstring[,new_link+(0:(n_models-1))*n_params] <- rbinom(n_models*n_samples,1,p_link)
-      }else{
-        smc_samples$Gstring[,new_link] <- rbinom(n_samples,1,p_link)
+      for (links in new_link){
+        smc_samples$gCube[,new_link] <- runif(n_samples)
+        smc_samples$nCube[,new_link] <- rexp(n_samples,1/2)
+        smc_samples$kCube[,new_link] <- runif(n_samples)
+        if (split_inhib){
+          smc_samples$Gstring[,new_link+(0:(n_models-1))*n_params] <- rbinom(n_models*n_samples,1,p_link)
+        }else{
+          smc_samples$Gstring[,new_link] <- rbinom(n_samples,1,p_link)
+        }
       }
 
       test_bString <- new_bString
@@ -282,7 +291,7 @@ cno_smc <- function(n_samples, data, model,
 
   if(diagnostics) print(w)
 
-  smc_samples$version <- "vAdd_variances"
+  smc_samples$version <- "vbig_example"
   smc_samples
 }
 
