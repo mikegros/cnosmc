@@ -62,6 +62,11 @@ cno_smc <- function(n_samples, data, model,
   # Turn on some links for initial subgraph
   test_bString[c(init_links)] <- 1
 
+  # Make sure a stimulus node is in the initial graph
+
+  top_nodes <- which(apply(model$interMat[,1:n_params],1,function(x){all(x != 1)}))
+  if (!any(init_links) %in% top_nodes) stop("Initial Graph Must Have A Stimulus Node!")
+
   if (split_inhib){
     n_models     <- length(inhib_inds)
     init_Gstring <- rbinom(n_models*n_params*n_samples,1,p_link)
