@@ -63,6 +63,8 @@ wrapper_to_sample_all_links = function(cl,
 
   inds <- which(Bstring==1)
 
+  if (n_mh == 0) return(list(gCube = gCube, nCube = nCube, kCube = kCube, Gstring = Gstring, sigsq = sigsq))
+
   #sample the active links only
 
   for (j in 1:n_mh){

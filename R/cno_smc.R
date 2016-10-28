@@ -6,6 +6,7 @@ cno_smc <- function(n_samples, data, model,
                     split_inhib = FALSE,
                     n_cores     = 1,
                     diagnostics = FALSE,
+                    checkpoint  = FALSE,
                     time_diagnostics    = FALSE,
                     excess_cluster_call = FALSE){
   #
@@ -269,6 +270,10 @@ cno_smc <- function(n_samples, data, model,
       }
 
       test_bString <- new_bString
+    }
+    if (checkpoint){
+      print("Saving samples as checkpoint.")
+      save(smc_samples,file = "smc_checkpoint.RData")
     }
   }
 
