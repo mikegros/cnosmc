@@ -82,7 +82,7 @@ cno_smc <- function(n_samples, data, model,
   # Make sure a stimulus node is in the initial graph
 
   top_nodes <- which(apply(model$interMat[,1:n_params],1,function(x){all(x != 1)}))
-  if (!any(init_links) %in% top_nodes) stop("Initial Graph Must Have A Stimulus Node!")
+  if (!any(model$interMat[,init_links][top_nodes,] == -1)) stop("Initial Graph Must Have A Stimulus Node!")
 
   if (split_inhib){
     n_models     <- length(inhib_inds)
