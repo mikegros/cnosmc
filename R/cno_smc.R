@@ -77,8 +77,8 @@ cno_smc <- function(n_samples, data, model,
                              11L,  9L, 17L, 49L, 53L, 20L, 35L,  1L,  7L, 16L)
 
   # Turn on some links for initial subgraph
-  test_bString[determine_add_list[[1]]] <- 1
-
+  init_links               <- determine_add_list[[1]]
+  test_bString[init_links] <- 1
   # Make sure a stimulus node is in the initial graph
 
   top_nodes <- which(apply(model$interMat[,1:n_params],1,function(x){all(x != 1)}))
