@@ -59,8 +59,25 @@ cno_smc <- function(n_samples, data, model,
   init_kCube <- 1*runif(n_params*n_samples)
   init_sigsq <- 1/rgamma(n_samples,1.25,10^-5)
 
+  determine_add_list <- list(c(31L, 39L, 47L),
+                             c(33L, 46L),
+                             c(19L, 32L, 44L),
+                             c(6L, 28L, 36L, 43L),
+                             c(15L, 27L, 51L),
+                             c(2L, 38L, 40L, 50L),
+                             c(25L, 37L),
+                             c(3L, 26L, 45L),
+                             34L,
+                             c(18L, 23L),
+                             c(10L, 12L, 21L),
+                             24L,
+                             4L,
+                             c(5L, 13L),
+                             41L, 14L, 29L,  8L, 30L, 42L, 22L, 52L, 48L,
+                             11L,  9L, 17L, 49L, 53L, 20L, 35L,  1L,  7L, 16L)
+
   # Turn on some links for initial subgraph
-  test_bString[c(init_links)] <- 1
+  test_bString[determine_add_list[[1]]] <- 1
 
   # Make sure a stimulus node is in the initial graph
 
@@ -97,7 +114,7 @@ cno_smc <- function(n_samples, data, model,
       Logpriorn(smc_samples$nCube[samp,]) +
       Logpriork(smc_samples$kCube[samp,]) })
 
-  for (stage in 1:n_params){
+  for (stage in 1:33){
 
     print(paste("Stage: ",stage,sep=""))
     if(diagnostics) save(smc_samples,file='smc_samples.RData')
@@ -256,10 +273,9 @@ cno_smc <- function(n_samples, data, model,
     # new_bString  <- add_link(init_bit_string=test_bString,links_mat=model$interMat)
 
     # Adding steps deterministically for now:
-    schedule_add <- c(1)
     new_bString  <- test_bString
 
-    new_bString[schedule_add] <- 1
+    if(stage < 33) new_bString[determine_add_list[[stage+1]]] <- 1
 
     nParamsAdded <- length(which(new_bString==1)) - length(which(test_bString==1))
 
@@ -287,7 +303,8 @@ cno_smc <- function(n_samples, data, model,
     }
     if (checkpoint){
       print("Saving samples as checkpoint.")
-      save(smc_samples,file = "smc_checkpoint.RData")
+      print(paste("at", Sys.time()))
+      save(smc_samples,w,ESS,file = paste("smc_checkpoint_",stage,".RData",sep=""))
     }
   }
 
