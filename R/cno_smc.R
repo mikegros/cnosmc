@@ -65,7 +65,7 @@ cno_smc <- function(n_samples, data, model,
   # Make sure a stimulus node is in the initial graph
 
   top_nodes <- which(apply(model$interMat[,1:n_params],1,function(x){all(x != 1)}))
-  if (!any(model$interMat[,init_links][top_nodes,] == -1)) stop("Initial Graph Must Have A Stimulus Node!")
+  if (!any(model$interMat[,init_links,drop=FALSE][top_nodes,] == -1)) stop("Initial Graph Must Have A Stimulus Node!")
 
   if (split_inhib){
     n_models     <- length(inhib_inds)
@@ -96,6 +96,8 @@ cno_smc <- function(n_samples, data, model,
       Logpriorg(smc_samples$gCube[samp,]) +
       Logpriorn(smc_samples$nCube[samp,]) +
       Logpriork(smc_samples$kCube[samp,]) })
+
+  w <- rep(1,n_samples)/n_samples
 
   for (stage in 1:n_params){
 
@@ -139,10 +141,12 @@ cno_smc <- function(n_samples, data, model,
       }))
     }
 
-    w  <- new_post - old_post
+    w  <- log(w) + new_post - old_post
     w  <- w - max(w)
     w  <- exp(w)
     w  <- w/sum(w)
+
+    smc_samples$w <- w
 
     if(time_diagnostics) t1 <- proc.time() - t1
     if(time_diagnostics) print(paste('Time elapsed for calculating weights:',round(t1[3]/60,3),'minutes'))
@@ -154,14 +158,18 @@ cno_smc <- function(n_samples, data, model,
 
     # Resample parameters using likelihood weights
     if(time_diagnostics) t2 <- proc.time()
-    resample_inds <- sample(1:n_samples,n_samples,replace = TRUE,prob=w)
+    if (ESS < n_samples/2){
+      resample_inds <- sample(1:n_samples,n_samples,replace = TRUE,prob=w)
 
-    smc_samples$gCube   <- smc_samples$gCube[resample_inds,]
-    smc_samples$nCube   <- smc_samples$nCube[resample_inds,]
-    smc_samples$kCube   <- smc_samples$kCube[resample_inds,]
-    smc_samples$Gstring <- smc_samples$Gstring[resample_inds,]
-    smc_samples$sigsq   <- smc_samples$sigsq[resample_inds,,drop=FALSE]
-    smc_samples$w       <- w
+      smc_samples$gCube   <- smc_samples$gCube[resample_inds,]
+      smc_samples$nCube   <- smc_samples$nCube[resample_inds,]
+      smc_samples$kCube   <- smc_samples$kCube[resample_inds,]
+      smc_samples$Gstring <- smc_samples$Gstring[resample_inds,]
+      smc_samples$sigsq   <- smc_samples$sigsq[resample_inds,,drop=FALSE]
+      smc_samples$w       <- rep(1,n_samples)/n_samples
+
+      w <- rep(1,n_samples)/n_samples
+    }
 
     if(time_diagnostics) t2 <- proc.time() - t2
     if(time_diagnostics) print(paste('Time elapsed for resampling:',round(t2[3]/60,3),'minutes'))
@@ -170,7 +178,6 @@ cno_smc <- function(n_samples, data, model,
     if( n_cores > 1 ) clusterExport(cl,varlist=ls(),envir = environment())
     if(excess_cluster_call) clusterExport(cl1,varlist=ls(),envir = environment())
 
-    if (ESS < n_samples/2){
     if( n_cores > 1 & !excess_cluster_call ){
       tmp <- parSapply(cl,1:n_samples,function(samp){wrapper_to_sample_all_links(cl   = cl1,
                                                                                  n_mh = n_mh,
@@ -210,7 +217,7 @@ cno_smc <- function(n_samples, data, model,
       smc_samples$sigsq[samp,]   <- tmp[,samp]$sigsq
       smc_samples$Gstring[samp,] <- tmp[,samp]$Gstring
     }
-    }
+
     if(time_diagnostics) t3 <- proc.time() - t3
     if(time_diagnostics) print(paste('Time elapsed for MH step:',t3[3]/60))
 
@@ -287,7 +294,7 @@ cno_smc <- function(n_samples, data, model,
 
   if(diagnostics) print(w)
 
-  smc_samples$version <- "v1.03"
+  smc_samples$version <- "vIssue6"
   smc_samples
 }
 
