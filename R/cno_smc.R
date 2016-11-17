@@ -287,7 +287,7 @@ cno_smc <- function(n_samples, data, model,
 
   if(diagnostics) print(w)
 
-  smc_samples$version <- "vAdd_variances"
+  smc_samples$version <- "v1.03"
   smc_samples
 }
 
