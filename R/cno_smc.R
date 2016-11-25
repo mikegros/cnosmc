@@ -294,7 +294,7 @@ cno_smc <- function(n_samples, data, model,
 
   if(diagnostics) print(w)
 
-  smc_samples$version <- "vIssue6"
+  smc_samples$version <- "v1.03"
   smc_samples
 }
 
