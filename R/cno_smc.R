@@ -319,7 +319,7 @@ cno_smc <- function(n_samples, data, model,
 
   if(diagnostics) print(w)
 
-  smc_samples$version <- "vbig_example"
+  smc_samples$version <- "vNew_big_example"
 
   smc_samples
 }
