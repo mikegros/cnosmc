@@ -251,7 +251,7 @@ getMSEFuzzy = function(cl1     = NULL,
 
     # Return Inf for the SSE and MSE if the SimResults matrix is bad
     if(is.na(Score)){
-      return(list(model = model,MSE=Inf,Score=Inf,NAFac=NAFac,sizeFac=sizeFac,SimResults=SimResults,nDataP = nDataP,SSE=Inf))
+      return(list(model = model,MSE=Inf,Score=Inf,NAFac=NAFac,sizeFac=sizeFac,SimResults=SimResults,nDataP = 1,SSE=Inf))
     }else{
       nDataP = sum(!is.na(paramsList$data$valueSignals[[2]][inhib_inds[[ii]],active_nodes]))
       MSE    = Score/nDataP
