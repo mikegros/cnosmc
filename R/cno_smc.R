@@ -216,49 +216,12 @@ cno_smc <- function(n_samples, data, model,
       smc_samples$kCube[samp,]   <- tmp[,samp]$kCube
       smc_samples$sigsq[samp,]   <- tmp[,samp]$sigsq
       smc_samples$Gstring[samp,] <- tmp[,samp]$Gstring
+
+      old_post[samp]             <- tmp[,samp]$post
     }
 
     if(time_diagnostics) t3 <- proc.time() - t3
     if(time_diagnostics) print(paste('Time elapsed for MH step:',t3[3]/60))
-
-
-    if(time_diagnostics) t4 <- proc.time()
-    if( n_cores > 1 ) clusterExport(cl,varlist=ls(),envir = environment())
-    if(excess_cluster_call) clusterExport(cl,varlist=ls(),envir = environment())
-
-    if( n_cores > 1 & !excess_cluster_call){
-      old_post <- parSapply(cl,1:n_samples, function(samp){
-        posterior(cl1,
-                  Bstring = test_bString,
-                  smc_samples$Gstring[samp,],
-                  gCube   = smc_samples$gCube[samp,],
-                  nCube   = smc_samples$nCube[samp,],
-                  kCube   = smc_samples$kCube[samp,],
-                  sigsq   = smc_samples$sigsq[samp,],
-                  p_link     = p_link,
-                  inhib_inds = inhib_inds,
-                  model      = model,
-                  paramsList = paramsList,
-                  indexList  = indexList)
-      })
-    } else{
-      old_post <- (sapply(1:n_samples, function(samp){
-        posterior(cl1,test_bString,
-                  smc_samples$Gstring[samp,],
-                  smc_samples$gCube[samp,],
-                  smc_samples$nCube[samp,],
-                  smc_samples$kCube[samp,],
-                  smc_samples$sigsq[samp,],
-                  p_link     = p_link,
-                  inhib_inds = inhib_inds,
-                  model      = model,
-                  paramsList = paramsList,
-                  indexList  = indexList)
-      }))
-    }
-
-    if(time_diagnostics)  t4 <- proc.time() - t4
-    if(time_diagnostics)  print(paste('Time elapsed for calculating old posterior:',t4[3]/60))
 
     new_bString  <- add_link(init_bit_string=test_bString,links_mat=model$interMat)
     nParamsAdded <- length(which(new_bString==1)) - length(which(test_bString==1))

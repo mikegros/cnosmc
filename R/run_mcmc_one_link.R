@@ -218,5 +218,5 @@ run_mcmc_one_link <- function(cl,
     current_post <- prop_post
   }
 
-  list(gCube = gCube, kCube = kCube, nCube = nCube, Gstring = Gstring)
+  list(gCube = gCube, kCube = kCube, nCube = nCube, Gstring = Gstring, post = current_post)
 }

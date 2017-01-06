@@ -68,6 +68,23 @@ wrapper_to_sample_all_links = function(cl,
   #sample the active links only
 
   for (j in 1:n_mh){
+    fuzzy_out <- getMSEFuzzy(cl,
+                             Bstring    = Bstring,
+                             Gstring    = Gstring,
+                             gCube      = gCube,
+                             nCube      = nCube,
+                             kCube      = kCube,
+                             inhib_inds = inhib_inds,
+                             model      = model,
+                             paramsList = paramsList,
+                             indexList  = indexList,
+                             sizeFac    = 0,
+                             NAFac      = 0,
+                             verbose    = FALSE)
+    NN    <- fuzzy_out$nDataP
+    MSE   <- fuzzy_out$MSE
+    sigsq <- 1/rgamma(1,1.25+NN/2,10^-5+MSE/2)
+
     for (ind in inds){
 
       SampleOneLink = run_mcmc_one_link(cl=cl,
@@ -89,24 +106,9 @@ wrapper_to_sample_all_links = function(cl,
       nCube   = SampleOneLink$nCube
       kCube   = SampleOneLink$kCube
       Gstring = SampleOneLink$Gstring
+      post    = SampleOneLink$post
     }
-    fuzzy_out <- getMSEFuzzy(cl,
-                             Bstring    = Bstring,
-                             Gstring    = Gstring,
-                             gCube      = gCube,
-                             nCube      = nCube,
-                             kCube      = kCube,
-                             inhib_inds = inhib_inds,
-                             model      = model,
-                             paramsList = paramsList,
-                             indexList  = indexList,
-                             sizeFac    = 0,
-                             NAFac      = 0,
-                             verbose    = FALSE)
-    NN    <- fuzzy_out$nDataP
-    MSE   <- fuzzy_out$MSE
-    sigsq <- 1/rgamma(1,1.25+NN/2,10^-5+MSE/2)
   }
 
-  list(gCube = gCube, nCube = nCube, kCube = kCube, Gstring = Gstring, sigsq = sigsq)
+  list(gCube = gCube, nCube = nCube, kCube = kCube, Gstring = Gstring, sigsq = sigsq, post = post)
 }
