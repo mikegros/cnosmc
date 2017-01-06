@@ -58,19 +58,22 @@ posterior = function(cl,
 
   if(any(c(prior_g,prior_k,prior_n,prior_sigsq) == -Inf)) return(-Inf)
 
-  lik = -(1/2)*getMSEFuzzy(cl,
-                           Bstring    = Bstring,
-                           Gstring    = Gstring,
-                           gCube      = gCube,
-                           nCube      = nCube,
-                           kCube      = kCube,
-                           inhib_inds = inhib_inds,
-                           model      = model,
-                           paramsList = paramsList,
-                           indexList  = indexList,
-                           sizeFac    = 0,
-                           NAFac      = 0,
-                           verbose    = FALSE)$MSE/sigsq
+  get_mse <- getMSEFuzzy(cl,
+                         Bstring    = Bstring,
+                         Gstring    = Gstring,
+                         gCube      = gCube,
+                         nCube      = nCube,
+                         kCube      = kCube,
+                         inhib_inds = inhib_inds,
+                         model      = model,
+                         paramsList = paramsList,
+                         indexList  = indexList,
+                         sizeFac    = 0,
+                         NAFac      = 0,
+                         verbose    = FALSE)
+
+  lik = -(1/2)*get_mse$MSE/sigsq - get_mse$nDataP/2*log(sigsq)
+
 
   return(lik + prior_g + prior_k + prior_n + prior_sigsq + prior_Gstring)
 }
