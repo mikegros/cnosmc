@@ -82,7 +82,7 @@ wrapper_to_sample_all_links = function(cl,
                              NAFac      = 0,
                              verbose    = FALSE)
     NN    <- fuzzy_out$nDataP
-    MSE   <- fuzzy_out$MSE
+    SSE   <- fuzzy_out$SSE
     sigsq <- 1/rgamma(1,1.25+NN/2,10^-5+SSE/2)
 
     for (ind in inds){
