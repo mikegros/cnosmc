@@ -248,7 +248,12 @@ cno_smc <- function(n_samples, data, model,
     }
     if (checkpoint){
       print("Saving samples as checkpoint.")
-      save.image(file = paste("smc_checkpoint_",stage,".RData",sep=""))
+      tryCatch(save(smc_samples, test_bString, old_post, tmp,
+           n_samples, data, model,init_links,p_link,n_mh,jump_size,
+                    split_inhib,n_cores,diagnostics,checkpoint,new_bString, paramsList,
+                    time_diagnostics,excess_cluster_call,nParamsAdded,ESS, indexList,
+           file = paste("smc_checkpoint_",stage,"_lots_of_stuff.RData",sep="")),
+               save(smc_samples,file = paste("smc_checkpoint_",stage,".RData",sep="")) )
     }
   }
 
