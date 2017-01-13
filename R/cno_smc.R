@@ -3,7 +3,6 @@ cno_smc <- function(n_samples, data, model,
                     p_link      = 0.9,
                     n_mh        = 5,
                     jump_size   = rep(0.15,3),
-                    split_inhib = FALSE,
                     n_cores     = 1,
                     diagnostics = FALSE,
                     checkpoint  = FALSE,
@@ -16,19 +15,6 @@ cno_smc <- function(n_samples, data, model,
   #               Took SMC code from individual scripts and made it a standalone file.
   #                 Did tons of code cleaning to get it completely working and clean as well
   #
-
-  inhib_inds <- NULL
-  if (split_inhib){
-    inhib_settings <- unique(data$valueInhibitors)
-
-    inhib_inds <- apply(inhib_settings,1,function(y) which(apply(data$valueInhibitors,1,function(x) all(x==y))))
-
-    if(ncol(inhib_inds) == 1) {
-      tmp             <- c(inhib_inds)
-      inhib_inds      <- list()
-      inhib_inds[[1]] <- tmp
-    }
-  }
 
   paramsList          <- defaultParametersFuzzy(data, model)
   indexList           <- indexFinder(CNOlist = data, model = model)
@@ -84,13 +70,8 @@ cno_smc <- function(n_samples, data, model,
   top_nodes <- which(apply(model$interMat[,1:n_params],1,function(x){all(x != 1)}))
   if (!any(model$interMat[,init_links,drop=FALSE][top_nodes,] == -1)) stop("Initial Graph Must Have A Stimulus Node!")
 
-  if (split_inhib){
-    n_models     <- length(inhib_inds)
-    init_Gstring <- rbinom(n_models*n_params*n_samples,1,p_link)
-  }else{
-    n_models     <- 1
-    init_Gstring <- rbinom(n_params*n_samples,1,p_link)
-  }
+  n_models     <- 1
+  init_Gstring <- rbinom(n_params*n_samples,1,p_link)
 
   smc_samples <- list(gCube = matrix(init_gCube, ncol = n_params, nrow = n_samples, byrow = TRUE))
 
@@ -101,11 +82,7 @@ cno_smc <- function(n_samples, data, model,
   smc_samples$w       <- 1/n_samples
 
 
-  if (split_inhib){
-    colnames(smc_samples$Gstring) <- rep(colnames(model$interMat)[1:n_params],n_models)
-  }else{
-    colnames(smc_samples$Gstring) <- colnames(model$interMat)[1:n_params]
-  }
+  colnames(smc_samples$Gstring) <- colnames(model$interMat)[1:n_params]
 
   old_post <- sapply(1:n_samples, function(samp){
     LogpriorGstring(smc_samples$Gstring[samp,],p_link) +
@@ -135,7 +112,6 @@ cno_smc <- function(n_samples, data, model,
                                                       kCube      = smc_samples$kCube[samp,],
                                                       sigsq      = smc_samples$sigsq[samp,],
                                                       p_link     = p_link,
-                                                      inhib_inds = inhib_inds,
                                                       model      = model,
                                                       paramsList = paramsList,
                                                       indexList  = indexList)
@@ -150,7 +126,6 @@ cno_smc <- function(n_samples, data, model,
                                                           kCube      = smc_samples$kCube[samp,],
                                                           sigsq      = smc_samples$sigsq[samp,],
                                                           p_link     = p_link,
-                                                          inhib_inds = inhib_inds,
                                                           model      = model,
                                                           paramsList = paramsList,
                                                           indexList  = indexList)
@@ -204,7 +179,6 @@ cno_smc <- function(n_samples, data, model,
                                                                                  nCube      = smc_samples$nCube[samp,],
                                                                                  kCube      = smc_samples$kCube[samp,],
                                                                                  sigsq      = smc_samples$sigsq[samp,],
-                                                                                 inhib_inds = inhib_inds,
                                                                                  model      = model,
                                                                                  paramsList = paramsList,
                                                                                  indexList  = indexList,
@@ -219,7 +193,6 @@ cno_smc <- function(n_samples, data, model,
                                                                            nCube      = smc_samples$nCube[samp,],
                                                                            kCube      = smc_samples$kCube[samp,],
                                                                            sigsq      = smc_samples$sigsq[samp,],
-                                                                           inhib_inds = inhib_inds,
                                                                            model      = model,
                                                                            paramsList = paramsList,
                                                                            indexList  = indexList,
@@ -259,11 +232,7 @@ cno_smc <- function(n_samples, data, model,
         smc_samples$gCube[,new_link] <- runif(n_samples)
         smc_samples$nCube[,new_link] <- rexp(n_samples,1/2)
         smc_samples$kCube[,new_link] <- runif(n_samples)
-        if (split_inhib){
-          smc_samples$Gstring[,new_link+(0:(n_models-1))*n_params] <- rbinom(n_models*n_samples,1,p_link)
-        }else{
-          smc_samples$Gstring[,new_link] <- rbinom(n_samples,1,p_link)
-        }
+        smc_samples$Gstring[,new_link] <- rbinom(n_samples,1,p_link)
       }
 
       test_bString <- new_bString

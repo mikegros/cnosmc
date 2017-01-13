@@ -6,7 +6,6 @@ run_mcmc_one_link <- function(cl,
                               nCube,
                               kCube,
                               sigsq,
-                              inhib_inds,
                               model,
                               paramsList,
                               indexList,
@@ -61,78 +60,37 @@ run_mcmc_one_link <- function(cl,
   #params g,k,n
   #sample Gstring separately
 
-  if (!is.null(inhib_inds)){
-    Gstring_1  <- Gstring
-    Gstring_0  <- Gstring
-    n_params   <- length(gCube)
-    n_models   <- length(inhib_inds)
+  Gstring_1  <- Gstring
+  Gstring_0  <- Gstring
+  n_params   <- length(gCube)
 
-    for (i in (1:n_models)){
+  Gstring_1[index] <- 1
+  Gstring_0[index] <- 0
 
-      Gstring_1[index+(i-1)*n_params] <- 1
-      Gstring_0[index+(i-1)*n_params] <- 0
+  like_Gstring_1    <- (-1/2)*getMSEFuzzy(cl=cl,
+                                          Bstring    = Bstring,
+                                          Gstring    = Gstring_1,
+                                          gCube      = gCube,
+                                          nCube      = nCube,
+                                          kCube      = kCube,
+                                          model      = model,
+                                          paramsList = paramsList,
+                                          indexList  = indexList,
+                                          sizeFac    = 0,NAFac=0,verbose = FALSE)$SSE/sigsq
+  like_Gstring_0    <- (-1/2)*getMSEFuzzy(cl=cl,
+                                          Bstring    = Bstring,
+                                          Gstring    = Gstring_0,
+                                          gCube      = gCube,
+                                          nCube      = nCube,
+                                          kCube      = kCube,
+                                          model      = model,
+                                          paramsList = paramsList,
+                                          indexList  = indexList,
+                                          sizeFac    = 0,NAFac=0,verbose = FALSE)$SSE/sigsq
+  tmp <- max(c(like_Gstring_0,like_Gstring_1))
+  cond_p <- p_link*exp(like_Gstring_1-tmp)/(p_link*exp(like_Gstring_1-tmp)+(1-p_link)*exp(like_Gstring_0-tmp))
+  Gstring[index] <- rbinom(1,1,cond_p)
 
-      like_Gstring_1    <- (-1/2)*getMSEFuzzy(cl=cl,
-                                              Bstring    = Bstring,
-                                              Gstring    = Gstring_1,
-                                              gCube      = gCube,
-                                              nCube      = nCube,
-                                              kCube      = kCube,
-                                              inhib_inds = inhib_inds,
-                                              model      = model,
-                                              paramsList = paramsList,
-                                              indexList  = indexList,
-                                              sizeFac    = 0,NAFac=0,verbose = FALSE)$SSE/sigsq
-      like_Gstring_0    <- (-1/2)*getMSEFuzzy(cl=cl,
-                                              Bstring    = Bstring,
-                                              Gstring    = Gstring_0,
-                                              gCube      = gCube,
-                                              nCube      = nCube,
-                                              kCube      = kCube,
-                                              inhib_inds = inhib_inds,
-                                              model      = model,
-                                              paramsList = paramsList,
-                                              indexList  = indexList,
-                                              sizeFac    = 0,NAFac=0,verbose = FALSE)$SSE/sigsq
-
-      tmp <- max(c(like_Gstring_0,like_Gstring_1))
-      cond_p <- p_link*exp(like_Gstring_1-tmp)/(p_link*exp(like_Gstring_1-tmp)+(1-p_link)*exp(like_Gstring_0-tmp))
-      Gstring[index+(i-1)*n_params] <- rbinom(1,1,cond_p)
-    }
-  }else{
-    Gstring_1  <- Gstring
-    Gstring_0  <- Gstring
-    n_params   <- length(gCube)
-
-    Gstring_1[index] <- 1
-    Gstring_0[index] <- 0
-
-    like_Gstring_1    <- (-1/2)*getMSEFuzzy(cl=cl,
-                                            Bstring    = Bstring,
-                                            Gstring    = Gstring_1,
-                                            gCube      = gCube,
-                                            nCube      = nCube,
-                                            kCube      = kCube,
-                                            inhib_inds = inhib_inds,
-                                            model      = model,
-                                            paramsList = paramsList,
-                                            indexList  = indexList,
-                                            sizeFac    = 0,NAFac=0,verbose = FALSE)$SSE/sigsq
-    like_Gstring_0    <- (-1/2)*getMSEFuzzy(cl=cl,
-                                            Bstring    = Bstring,
-                                            Gstring    = Gstring_0,
-                                            gCube      = gCube,
-                                            nCube      = nCube,
-                                            kCube      = kCube,
-                                            inhib_inds = inhib_inds,
-                                            model      = model,
-                                            paramsList = paramsList,
-                                            indexList  = indexList,
-                                            sizeFac    = 0,NAFac=0,verbose = FALSE)$SSE/sigsq
-    tmp <- max(c(like_Gstring_0,like_Gstring_1))
-    cond_p <- p_link*exp(like_Gstring_1-tmp)/(p_link*exp(like_Gstring_1-tmp)+(1-p_link)*exp(like_Gstring_0-tmp))
-    Gstring[index] <- rbinom(1,1,cond_p)
-  }
   current_post <- posterior(cl = cl,
                             Bstring    = Bstring,
                             Gstring    = Gstring,
@@ -141,7 +99,6 @@ run_mcmc_one_link <- function(cl,
                             kCube      = kCube,
                             sigsq      = sigsq,
                             p_link     = p_link,
-                            inhib_inds = inhib_inds,
                             model      = model,
                             paramsList = paramsList,
                             indexList  = indexList)
@@ -158,7 +115,6 @@ run_mcmc_one_link <- function(cl,
                          kCube      = kCube,
                          sigsq      = sigsq,
                          p_link     = p_link,
-                         inhib_inds = inhib_inds,
                          model      = model,
                          paramsList = paramsList,
                          indexList  = indexList)
@@ -181,7 +137,6 @@ run_mcmc_one_link <- function(cl,
                          kCube      = kCube_prop,
                          sigsq      = sigsq,
                          p_link     = p_link,
-                         inhib_inds = inhib_inds,
                          model      = model,
                          paramsList = paramsList,
                          indexList  = indexList)
@@ -205,7 +160,6 @@ run_mcmc_one_link <- function(cl,
                          kCube      = kCube,
                          sigsq      = sigsq,
                          p_link     = p_link,
-                         inhib_inds = inhib_inds,
                          model      = model,
                          paramsList = paramsList,
                          indexList  = indexList)
