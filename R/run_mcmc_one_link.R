@@ -82,7 +82,7 @@ run_mcmc_one_link <- function(cl,
                                               model      = model,
                                               paramsList = paramsList,
                                               indexList  = indexList,
-                                              sizeFac    = 0,NAFac=0,verbose = FALSE)$MSE/sigsq
+                                              sizeFac    = 0,NAFac=0,verbose = FALSE)$SSE/sigsq
       like_Gstring_0    <- (-1/2)*getMSEFuzzy(cl=cl,
                                               Bstring    = Bstring,
                                               Gstring    = Gstring_0,
@@ -93,7 +93,7 @@ run_mcmc_one_link <- function(cl,
                                               model      = model,
                                               paramsList = paramsList,
                                               indexList  = indexList,
-                                              sizeFac    = 0,NAFac=0,verbose = FALSE)$MSE/sigsq
+                                              sizeFac    = 0,NAFac=0,verbose = FALSE)$SSE/sigsq
 
       tmp <- max(c(like_Gstring_0,like_Gstring_1))
       cond_p <- p_link*exp(like_Gstring_1-tmp)/(p_link*exp(like_Gstring_1-tmp)+(1-p_link)*exp(like_Gstring_0-tmp))
@@ -117,7 +117,7 @@ run_mcmc_one_link <- function(cl,
                                             model      = model,
                                             paramsList = paramsList,
                                             indexList  = indexList,
-                                            sizeFac    = 0,NAFac=0,verbose = FALSE)$MSE/sigsq
+                                            sizeFac    = 0,NAFac=0,verbose = FALSE)$SSE/sigsq
     like_Gstring_0    <- (-1/2)*getMSEFuzzy(cl=cl,
                                             Bstring    = Bstring,
                                             Gstring    = Gstring_0,
@@ -128,7 +128,7 @@ run_mcmc_one_link <- function(cl,
                                             model      = model,
                                             paramsList = paramsList,
                                             indexList  = indexList,
-                                            sizeFac    = 0,NAFac=0,verbose = FALSE)$MSE/sigsq
+                                            sizeFac    = 0,NAFac=0,verbose = FALSE)$SSE/sigsq
     tmp <- max(c(like_Gstring_0,like_Gstring_1))
     cond_p <- p_link*exp(like_Gstring_1-tmp)/(p_link*exp(like_Gstring_1-tmp)+(1-p_link)*exp(like_Gstring_0-tmp))
     Gstring[index] <- rbinom(1,1,cond_p)
