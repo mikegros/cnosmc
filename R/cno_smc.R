@@ -248,7 +248,7 @@ cno_smc <- function(n_samples, data, model,
     }
     if (checkpoint){
       print("Saving samples as checkpoint.")
-      save(smc_samples,file = "smc_checkpoint.RData")
+      save.image(file = paste("smc_checkpoint_",stage,".RData",sep=""))
     }
   }
 
