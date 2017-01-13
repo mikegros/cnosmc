@@ -72,7 +72,7 @@ posterior = function(cl,
                          NAFac      = 0,
                          verbose    = FALSE)
 
-  lik = -(1/2)*get_mse$MSE/sigsq - get_mse$nDataP/2*log(sigsq)
+  lik = -(1/2)*get_mse$SSE/sigsq - get_mse$nDataP/2*log(sigsq)
 
 
   return(lik + prior_g + prior_k + prior_n + prior_sigsq + prior_Gstring)
