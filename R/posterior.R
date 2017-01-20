@@ -52,10 +52,9 @@ posterior = function(cl,
   prior_g       = Logpriorg(gCube)
   prior_k       = Logpriork(kCube)
   prior_n       = Logpriorn(nCube)
-  prior_sigsq   = Logpriorsigsq(sigsq[get_mse$active_nodes],1.25,10^-5)
   prior_Gstring = LogpriorGstring(Gstring,p_link)
 
-  if(any(c(prior_g,prior_k,prior_n,prior_sigsq) == -Inf)) return(-Inf)
+  if(any(c(prior_g,prior_k,prior_n) == -Inf)) return(-Inf)
 
   get_mse <- getMSEFuzzy(cl,
                          Bstring    = Bstring,
@@ -71,8 +70,9 @@ posterior = function(cl,
                          NAFac      = 0,
                          verbose    = FALSE)
 
-  lik = -(1/2)*get_mse$SSEvectorScaled[get_mse$active_nodes] - sum(get_mse$nDataP[get_mse$active_nodes]/2*log(sigsq[get_mse$active_nodes]))
+  lik = -(1/2)*sum(get_mse$SSEvectorScaled[get_mse$active_nodes]) - sum(get_mse$nDataP[get_mse$active_nodes]/2*log(sigsq[get_mse$active_nodes]))
 
+  prior_sigsq   = Logpriorsigsq(sigsq[get_mse$active_nodes],1.25,10^-5)
 
   return(lik + prior_g + prior_k + prior_n + prior_sigsq + prior_Gstring)
 }

@@ -236,7 +236,7 @@ cno_smc <- function(n_samples, data, model,
 
       active_nodes     <- sapply(strsplit(colnames(model$interMat)[which(test_bString==1)],split = "="),function(x){x[2]})
       active_nodes_new <- sapply(strsplit(colnames(model$interMat)[which(new_bString-test_bString==1)],split = "="),function(x){x[2]})
-      active_nodes_new <- intersection(active_nodes,active_nodes_new)
+      active_nodes_new <- intersect(active_nodes,active_nodes_new)
       active_nodes_new <- which(paramsList$data$namesSignals %in% active_nodes_new)
 
       smc_samples$sigsq[,active_nodes_new] <- 1/rgamma(n_samples*length(active_nodes_new),1.25,10^-5)
