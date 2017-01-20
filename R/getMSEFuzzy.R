@@ -14,12 +14,11 @@ getMSEFuzzy = function(cl1     = NULL,
 
 
   #
-  # Last modified April 26, 2016
+  #
   #
   # CHANGELOG:
   #
   # [Jan 20, 2017] Changes
-  #         Broke the clustercall likelihood evaluation
   #         Now sigsq is a vector but if it is a scalar then we make it into a vector
   #         output nDataP is now a vector of observation counts for everything, not just the active_nodes.
   #         active_nodes is a new output of indices of the observed columns of the data matrix.
@@ -194,19 +193,17 @@ getMSEFuzzy = function(cl1     = NULL,
     #       "replicate", but I think it is just a result of being at bad places in parameter space. Will explore this more
     #       to ensure that the SSE is being handled properly
     # Since we remove the NA values from the simulated data we may as well do the same from the real data
+    if(length(sigsq)==1){
+        sigsq = rep(sigsq,dim(paramsList$data$valueSignals[[2]])[2])
+    }
+    SumSqaredResidsByRun =
+                apply(SimResultsList,3,function(x) {#Get a vector of sums for each 3rd dimension element
+                       apply((x[,indexList$signals[active_nodes]] -
+                       paramsList$data$valueSignals[[2]][,active_nodes])^2, 2, sum,na.rm=TRUE)/sigsq[active_nodes]# sum down columns
+                     })
+
     SSEvectorScaled = rep(0,dim(paramsList$data$valueSignals[[2]])[2])
-    Scores          <- apply(SimResultsList,3,function(x) {sum(c(x[,indexList$signals[active_nodes]] - paramsList$data$valueSignals[[2]][,active_nodes])^2,na.rm=TRUE)})
-
-    SimResults <- SimResultsList[,,which.min(Scores)]
-    Score      <- min(Scores)
-
-    SimResultsList <- array(unlist(SimResultsList), dim = c(nrow(SimResultsList[[1]]), ncol(SimResultsList[[1]]), length(SimResultsList)))
-    SimResultsList[is.na(SimResultsList)] = 0
-    print("this is broken")
-
-    #Scores      <- apply(SimResultsList,3,function(x) {sum(
-    #SimResults <- SimResultsList[,,which.min(Scores)]
-    #Score      <- min(Scores)
+    SSEvectorScaled[active_nodes] = SumSqaredResidsByRun[, which.min(apply(SumSqaredResidsByRun,2,sum))]
   }else{
     SimResultsList <- simFuzzyT1(CNOlist = paramsList$data,
                                       model   = model,
