@@ -37,13 +37,14 @@ cno_smc <- function(n_samples, data, model,
 
   findMainEffects <- unlist(lapply(strsplit(model$reacID,'\\+'),function(x) {length(x) < 2} ))
   n_params        <- sum(findMainEffects)
+  n_signals       <- length(data$namesSignals)
 
   test_bString    <- rep(0,n_params)
 
   init_gCube <- 1*runif(n_params*n_samples)
   init_nCube <- rexp(n_params*n_samples,1/2)
   init_kCube <- 1*runif(n_params*n_samples)
-  init_sigsq <- 1/rgamma(n_samples,1.25,10^-5)
+  init_sigsq <- 1/rgamma(n_samples*n_signals,1.25,10^-5)
 
   # Turn on some links for initial subgraph
   test_bString[c(init_links)] <- 1
@@ -61,7 +62,7 @@ cno_smc <- function(n_samples, data, model,
   smc_samples$nCube   <- matrix(init_nCube,   ncol = n_params,          nrow = n_samples, byrow = TRUE)
   smc_samples$kCube   <- matrix(init_kCube,   ncol = n_params,          nrow = n_samples, byrow = TRUE)
   smc_samples$Gstring <- matrix(init_Gstring, ncol = n_models*n_params, nrow = n_samples, byrow = TRUE)
-  smc_samples$sigsq   <- matrix(init_sigsq,   ncol = 1,                 nrow = n_samples, byrow = TRUE)
+  smc_samples$sigsq   <- matrix(init_sigsq,   ncol = n_signals,         nrow = n_samples, byrow = TRUE)
   smc_samples$w       <- 1/n_samples
 
 
@@ -140,7 +141,7 @@ cno_smc <- function(n_samples, data, model,
       smc_samples$nCube   <- smc_samples$nCube[resample_inds,]
       smc_samples$kCube   <- smc_samples$kCube[resample_inds,]
       smc_samples$Gstring <- smc_samples$Gstring[resample_inds,]
-      smc_samples$sigsq   <- smc_samples$sigsq[resample_inds,,drop=FALSE]
+      smc_samples$sigsq   <- smc_samples$sigsq[resample_inds,]
       smc_samples$w       <- rep(1,n_samples)/n_samples
 
       w <- rep(1,n_samples)/n_samples
@@ -208,10 +209,17 @@ cno_smc <- function(n_samples, data, model,
       break
     } else{
       new_link <- which(new_bString - test_bString == 1)
-      smc_samples$gCube[,new_link] <- runif(n_samples)
-      smc_samples$nCube[,new_link] <- rexp(n_samples,1/2)
-      smc_samples$kCube[,new_link] <- runif(n_samples)
-      smc_samples$Gstring[,new_link] <- rbinom(n_samples,1,p_link)
+      smc_samples$gCube[,new_link]   <- runif(n_samples*length(new_link))
+      smc_samples$nCube[,new_link]   <- rexp(n_samples*length(new_link),1/2)
+      smc_samples$kCube[,new_link]   <- runif(n_samples*length(new_link))
+      smc_samples$Gstring[,new_link] <- rbinom(n_samples*length(new_link),1,p_link)
+
+      active_nodes     <- sapply(strsplit(colnames(model$interMat)[which(test_bString==1)],split = "="),function(x){x[2]})
+      active_nodes_new <- sapply(strsplit(colnames(model$interMat)[which(new_bString-test_bString==1)],split = "="),function(x){x[2]})
+      active_nodes_new <- intersection(active_nodes,active_nodes_new)
+      active_nodes_new <- which(paramsList$data$namesSignals %in% active_nodes_new)
+
+      smc_samples$sigsq[,active_nodes_new] <- 1/rgamma(n_samples*length(active_nodes_new),1.25,10^-5)
 
       test_bString <- new_bString
     }
