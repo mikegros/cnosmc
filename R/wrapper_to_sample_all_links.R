@@ -73,16 +73,20 @@ wrapper_to_sample_all_links = function(cl,
                              gCube      = gCube,
                              nCube      = nCube,
                              kCube      = kCube,
+                             sigsq      = sigsq,
                              model      = model,
                              paramsList = paramsList,
                              indexList  = indexList,
                              sizeFac    = 0,
                              NAFac      = 0,
                              verbose    = FALSE)
-    NN    <- fuzzy_out$nDataP
-    SSE   <- fuzzy_out$SSE
-    sigsq <- 1/rgamma(1,1.25+NN/2,10^-5+SSE/2)
+    for (signal in fuzzy_out$active_nodes){
+      NN    <- fuzzy_out$nDataP[signal]
+      SSE   <- fuzzy_out$SSEvectorScaled[signal]
 
+      # Draw sigsq for each node by Gibbs
+      sigsq[signal] <- 1/rgamma(1,1.25+NN/2,10^-5+SSE/2)
+    }
     for (ind in inds){
 
       SampleOneLink = run_mcmc_one_link(cl=cl,
