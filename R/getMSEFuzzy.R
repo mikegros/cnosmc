@@ -4,6 +4,7 @@ getMSEFuzzy = function(cl1     = NULL,
                        gCube      = rep(4,  length(model$reacID[-grep("\\+",model$reacID)])),
                        nCube      = rep(.5, length(model$reacID[-grep("\\+",model$reacID)])),
                        kCube      = rep(.2, length(model$reacID[-grep("\\+",model$reacID)])),
+                       sigsq,
                        sizeFac    = 0,
                        NAFac      = 0,
                        verbose    = FALSE,
@@ -11,10 +12,17 @@ getMSEFuzzy = function(cl1     = NULL,
                        paramsList,
                        indexList){
 
+
   #
   # Last modified April 26, 2016
   #
   # CHANGELOG:
+  #
+  # [Jan 20, 2017] Changes
+  #         Broke the clustercall likelihood evaluation
+  #         Now sigsq is a vector but if it is a scalar then we make it into a vector
+  #         output nDataP is now a vector of observation counts for everything, not just the active_nodes.
+  #         active_nodes is a new output of indices of the observed columns of the data matrix.
   #
   # [April 26, 2016] Changes
   #         Renamed file for clarity of use with respect to the R package
@@ -150,7 +158,7 @@ getMSEFuzzy = function(cl1     = NULL,
   #           build the discrete Boolean version of the model using 'interpretDiscreteGA'.
   #           Then it includes the model parameters to obtain the model fit using 'simFuzzyT1'
   #===============================================================%
-
+  
   if(verbose){
     print("note that SSE = deviationPen + NAPen + sizePen")
     print(paste("Where: NAPen <- NAFac * length(which(is.na(simResults)) but NAFac = ",NAFac))
@@ -178,10 +186,40 @@ getMSEFuzzy = function(cl1     = NULL,
     SimResultsList <- clusterCall(cl1,function() {simFuzzyT1(CNOlist = paramsList$data,
                                                              model   = model,
                                                              simList = simList)})
+    SimResultsList <- array(unlist(SimResultsList), dim = c(nrow(SimResultsList[[1]]), ncol(SimResultsList[[1]]), length(SimResultsList)))
+    SimResultsList[is.na(SimResultsList)] = 0
+    # Obtain the SSEs from the simulated results and the data
+    # NOTE: Occasionally this returns NA values for some parameter settings. In these cases SimResultsList seems to give
+    #       back a blank matrix of values. May be an issue with the apply statement and the structure of the output from
+    #       "replicate", but I think it is just a result of being at bad places in parameter space. Will explore this more
+    #       to ensure that the SSE is being handled properly
+    # Since we remove the NA values from the simulated data we may as well do the same from the real data
+    SSEvectorScaled = rep(0,dim(paramsList$data$valueSignals[[2]])[2])
+    Scores          <- apply(SimResultsList,3,function(x) {sum(c(x[,indexList$signals[active_nodes]] - paramsList$data$valueSignals[[2]][,active_nodes])^2,na.rm=TRUE)})
+    
+    SimResults <- SimResultsList[,,which.min(Scores)]
+    Score      <- min(Scores)
+    
+    SimResultsList <- array(unlist(SimResultsList), dim = c(nrow(SimResultsList[[1]]), ncol(SimResultsList[[1]]), length(SimResultsList)))
+    SimResultsList[is.na(SimResultsList)] = 0
+    print("this is broken")
+    
+    #Scores      <- apply(SimResultsList,3,function(x) {sum(
+    #SimResults <- SimResultsList[,,which.min(Scores)]
+    #Score      <- min(Scores)
   }else{
-    SimResultsList <- list(simFuzzyT1(CNOlist = paramsList$data,
+    SimResultsList <- simFuzzyT1(CNOlist = paramsList$data,
                                       model   = model,
-                                      simList = simList))
+                                      simList = simList)
+    if(length(sigsq)==1){
+        sigsq = rep(sigsq,dim(paramsList$data$valueSignals[[2]])[2])
+    }
+                                 
+     SSEvectorScaled = rep(0,dim(paramsList$data$valueSignals[[2]])[2])
+     SSEvectorScaled[active_nodes] = apply((SimResultsList[,indexList$signals[active_nodes]] -
+                                           paramsList$data$valueSignals[[2]][,active_nodes])^2, 2, sum,na.rm=TRUE)/sigsq[active_nodes]
+                                      
+
   }
 
   # NOTE: Setting all NA values to 0. This is just a hack to avoid killing particles that might otherwise be at a reasonable
@@ -189,27 +227,23 @@ getMSEFuzzy = function(cl1     = NULL,
   #       particles or add a more reasonble NA penalty.
 
   ################
-  SimResultsList <- array(unlist(SimResultsList), dim = c(nrow(SimResultsList[[1]]), ncol(SimResultsList[[1]]), length(SimResultsList)))
-  SimResultsList[is.na(SimResultsList)] = 0
+  
   # Obtain the SSEs from the simulated results and the data
   # NOTE: Occasionally this returns NA values for some parameter settings. In these cases SimResultsList seems to give
   #       back a blank matrix of values. May be an issue with the apply statement and the structure of the output from
   #       "replicate", but I think it is just a result of being at bad places in parameter space. Will explore this more
   #       to ensure that the SSE is being handled properly
   # Since we remove the NA values from the simulated data we may as well do the same from the real data
-  Scores      <- apply(SimResultsList,3,function(x) {sum(c(x[,indexList$signals[active_nodes]] - paramsList$data$valueSignals[[2]][,active_nodes])^2,na.rm=TRUE)})
-
-  SimResults <- SimResultsList[,,which.min(Scores)]
-  Score      <- min(Scores)
+  
 
   # Return Inf for the SSE and MSE if the SimResults matrix is bad
   if(is.na(Score)){
     return(list(model = model,MSE=Inf,Score=Inf,NAFac=NAFac,sizeFac=sizeFac,SimResults=SimResults,nDataP = 1,SSE=Inf))
   }else{
-    nDataP = sum(!is.na(paramsList$data$valueSignals[[2]][,active_nodes]))
-    MSE    = Score/nDataP
+    nDataP = colSums(!is.na(paramsList$data$valueSignals[[2]]))
+    MSE    = SSEvectorScaled/nDataP
     return(list(model = model,MSE=MSE,NAFac=NAFac,nDataP = nDataP,
                 sizeFac=sizeFac,SimResults=SimResults,
-                SSE=Score))
+                SSEvectorScaled=SSEvectorScaled, active_nodes=active_nodes))
   }
 }
