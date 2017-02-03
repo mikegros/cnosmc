@@ -1,5 +1,4 @@
 
-library(ks)
 final_pass <- function(smc_samples, n_samples,p_link,nreps = 5){
   # Feb 3 2017, 
   # use this as a final pass to correct for inconsistencies in the posterior
