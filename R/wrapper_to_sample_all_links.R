@@ -10,6 +10,7 @@ wrapper_to_sample_all_links = function(cl,
                                        model,
                                        paramsList,
                                        indexList,
+                                       cube_inds,
                                        jump_size){
 
   #Last update:  April 14 2016 Biljana
@@ -77,6 +78,7 @@ wrapper_to_sample_all_links = function(cl,
                              model      = model,
                              paramsList = paramsList,
                              indexList  = indexList,
+                             cube_inds  = cube_inds,
                              sizeFac    = 0,
                              NAFac      = 0,
                              verbose    = FALSE)
@@ -100,6 +102,7 @@ wrapper_to_sample_all_links = function(cl,
                                         model      = model,
                                         paramsList = paramsList,
                                         indexList  = indexList,
+                                        cube_inds  = cube_inds,
                                         jump_size  = jump_size,
                                         index      = ind)
 

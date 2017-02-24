@@ -8,7 +8,8 @@ posterior = function(cl,
                      p_link,
                      model,
                      paramsList,
-                     indexList){
+                     indexList,
+                     cube_inds){
 
   # Last update: April 14, 2015  Biljana
   # introduced datalst parameter that swithches off or on dataList usage
@@ -66,6 +67,7 @@ posterior = function(cl,
                          model      = model,
                          paramsList = paramsList,
                          indexList  = indexList,
+                         cube_inds  = cube_inds,
                          sizeFac    = 0,
                          NAFac      = 0,
                          verbose    = FALSE)
