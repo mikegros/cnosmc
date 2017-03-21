@@ -44,16 +44,20 @@ cno_smc <- function(n_samples, data, model,
   # Finding correct indices for entries of gCube, etc
   simList <- prep4simFuzzy(model = model, paramsList = paramsList, verbose = FALSE)
 
-  cube_inds <- matrix(0,nrow(simList$gCube) - n_params,2)
+  if ( ncol(simList$gCube) == 2 ){
+    cube_inds <- matrix(0,nrow(simList$gCube) - n_params,2)
 
-  for (jj in (1:nrow(simList$gCube))[-(1:n_params)]) {
-    tmp1 <- strsplit(colnames(model$interMat)[jj],"=")[[1]]
-    tmp2 <- strsplit(tmp1[1],"\\+")[[1]]
-    cube_inds[jj-n_params,1] <- which(apply(sapply(colnames(model$interMat)[1:n_params],function(x)strsplit(x,"=")[[1]]),
-                                      2,function(y) all(y == c(tmp2[1],tmp1[2]))))
-    cube_inds[jj-n_params,2] <- which(apply(sapply(colnames(model$interMat)[1:n_params],function(x)strsplit(x,"=")[[1]]),
-                                      2,function(y) all(y == c(tmp2[2],tmp1[2]))))
+    for (jj in (1:nrow(simList$gCube))[-(1:n_params)]) {
+      tmp1 <- strsplit(colnames(model$interMat)[jj],"=")[[1]]
+      tmp2 <- strsplit(tmp1[1],"\\+")[[1]]
+      cube_inds[jj-n_params,1] <- which(apply(sapply(colnames(model$interMat)[1:n_params],function(x)strsplit(x,"=")[[1]]),
+                                              2,function(y) all(y == c(tmp2[1],tmp1[2]))))
+      cube_inds[jj-n_params,2] <- which(apply(sapply(colnames(model$interMat)[1:n_params],function(x)strsplit(x,"=")[[1]]),
+                                              2,function(y) all(y == c(tmp2[2],tmp1[2]))))
 
+    }
+  } else{
+    cube_inds <- NA
   }
 
   # Continue with initializing model
@@ -110,6 +114,12 @@ cno_smc <- function(n_samples, data, model,
 
   w <- rep(1,n_samples)/n_samples
 
+  mh_jump_size <- data.frame(
+    g = rep(jump_size[1],n_params),
+    n = rep(jump_size[2],n_params),
+    k = rep(jump_size[3],n_params)
+  )
+
   for (stage in 1:33){
     print(paste("Stage: ",stage,sep=""))
     if(diagnostics) save(smc_samples,file='smc_samples.RData')
@@ -132,6 +142,7 @@ cno_smc <- function(n_samples, data, model,
                                                       model      = model,
                                                       paramsList = paramsList,
                                                       indexList  = indexList,
+                                                      simList    = simList,
                                                       cube_inds  = cube_inds)
       }))
     } else {
@@ -147,6 +158,7 @@ cno_smc <- function(n_samples, data, model,
                                                           model      = model,
                                                           paramsList = paramsList,
                                                           indexList  = indexList,
+                                                          simList    = simList,
                                                           cube_inds  = cube_inds)
       }))
     }
@@ -201,8 +213,9 @@ cno_smc <- function(n_samples, data, model,
                                                                                  model      = model,
                                                                                  paramsList = paramsList,
                                                                                  indexList  = indexList,
+                                                                                 simList    = simList,
                                                                                  cube_inds  = cube_inds,
-                                                                                 jump_size  = jump_size)})
+                                                                                 jump_size  = mh_jump_size)})
     }else{
       tmp <- sapply(1:n_samples,function(samp){wrapper_to_sample_all_links(cl   = cl1,
                                                                            n_mh = n_mh,
@@ -216,9 +229,17 @@ cno_smc <- function(n_samples, data, model,
                                                                            model      = model,
                                                                            paramsList = paramsList,
                                                                            indexList  = indexList,
+                                                                           simList    = simList,
                                                                            cube_inds  = cube_inds,
-                                                                           jump_size  = jump_size)})
+                                                                           jump_size  = mh_jump_size)})
     }
+
+    # These variables are used to count how often mh transitions are accepted
+    #     for changing jump_size between stages
+
+    g_jump <- rep(0,n_params)
+    n_jump <- rep(0,n_params)
+    k_jump <- rep(0,n_params)
 
     for (samp in 1:n_samples){
       smc_samples$gCube[samp,]   <- tmp[,samp]$gCube
@@ -227,8 +248,17 @@ cno_smc <- function(n_samples, data, model,
       smc_samples$sigsq[samp,]   <- tmp[,samp]$sigsq
       smc_samples$Gstring[samp,] <- tmp[,samp]$Gstring
 
+      g_jump <- g_jump + tmp[,samp]$accepted$g
+      n_jump <- n_jump + tmp[,samp]$accepted$n
+      k_jump <- k_jump + tmp[,samp]$accepted$k
+
       old_post[samp]             <- tmp[,samp]$post
     }
+
+    # Update jump size
+    mh_jump_size$g <- (g_jump + 1)/(n_samples*n_mh + 2) / 0.44 * mh_jump_size$g
+    mh_jump_size$n <- (n_jump + 1)/(n_samples*n_mh + 2) / 0.44 * mh_jump_size$n
+    mh_jump_size$k <- (k_jump + 1)/(n_samples*n_mh + 2) / 0.44 * mh_jump_size$k
 
     if(time_diagnostics) t3 <- proc.time() - t3
     if(time_diagnostics) print(paste('Time elapsed for MH step:',t3[3]/60))
@@ -254,6 +284,10 @@ cno_smc <- function(n_samples, data, model,
       smc_samples$kCube[,new_link]   <- runif(n_samples*length(new_link))
       smc_samples$Gstring[,new_link] <- rbinom(n_samples*length(new_link),1,p_link)
 
+      mh_jump_size$g[new_link] <- mean(mh_jump_size$g[test_bString == 1])
+      mh_jump_size$n[new_link] <- mean(mh_jump_size$n[test_bString == 1])
+      mh_jump_size$k[new_link] <- mean(mh_jump_size$k[test_bString == 1])
+
       active_nodes     <- sapply(strsplit(colnames(model$interMat)[which(test_bString==1)],split = "="),function(x){x[2]})
       active_nodes_new <- sapply(strsplit(colnames(model$interMat)[which(new_bString-test_bString==1)],split = "="),function(x){x[2]})
       active_nodes_new <- intersect(active_nodes,active_nodes_new)
@@ -275,7 +309,9 @@ cno_smc <- function(n_samples, data, model,
 
   if(diagnostics) print(w)
 
-  smc_samples$version <- "vNew_big_example"
+  smc_samples$mh_jump_size <- mh_jump_size
+
+  smc_samples$version <- "vNew_big_example1.04"
 
   smc_samples
 }

@@ -10,6 +10,7 @@ wrapper_to_sample_all_links = function(cl,
                                        model,
                                        paramsList,
                                        indexList,
+                                       simList,
                                        cube_inds,
                                        jump_size){
 
@@ -63,7 +64,9 @@ wrapper_to_sample_all_links = function(cl,
 
   inds <- which(Bstring==1)
 
-  if (n_mh == 0) return(list(gCube = gCube, nCube = nCube, kCube = kCube, Gstring = Gstring, sigsq = sigsq))
+  accepted <- data.frame(g = gCube*0, n = nCube*0, k = kCube*0)
+
+  if (n_mh == 0) return(list(gCube = gCube, nCube = nCube, kCube = kCube, Gstring = Gstring, sigsq = sigsq, accepted = accepted))
 
   #sample the active links only
 
@@ -78,6 +81,7 @@ wrapper_to_sample_all_links = function(cl,
                              model      = model,
                              paramsList = paramsList,
                              indexList  = indexList,
+                             simList    = simList,
                              cube_inds  = cube_inds,
                              sizeFac    = 0,
                              NAFac      = 0,
@@ -102,6 +106,7 @@ wrapper_to_sample_all_links = function(cl,
                                         model      = model,
                                         paramsList = paramsList,
                                         indexList  = indexList,
+                                        simList    = simList,
                                         cube_inds  = cube_inds,
                                         jump_size  = jump_size,
                                         index      = ind)
@@ -111,8 +116,12 @@ wrapper_to_sample_all_links = function(cl,
       kCube   = SampleOneLink$kCube
       Gstring = SampleOneLink$Gstring
       post    = SampleOneLink$post
+
+      accepted$g[ind] = accepted$g[ind] + SampleOneLink$accepted$g
+      accepted$n[ind] = accepted$n[ind] + SampleOneLink$accepted$n
+      accepted$k[ind] = accepted$k[ind] + SampleOneLink$accepted$k
     }
   }
 
-  list(gCube = gCube, nCube = nCube, kCube = kCube, Gstring = Gstring, sigsq = sigsq, post = post)
+  list(gCube = gCube, nCube = nCube, kCube = kCube, Gstring = Gstring, sigsq = sigsq, post = post, accepted = accepted)
 }

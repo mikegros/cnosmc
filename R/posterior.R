@@ -9,6 +9,7 @@ posterior = function(cl,
                      model,
                      paramsList,
                      indexList,
+                     simList,
                      cube_inds){
 
   # Last update: April 14, 2015  Biljana
@@ -67,6 +68,7 @@ posterior = function(cl,
                          model      = model,
                          paramsList = paramsList,
                          indexList  = indexList,
+                         simList    = simList,
                          cube_inds  = cube_inds,
                          sizeFac    = 0,
                          NAFac      = 0,

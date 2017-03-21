@@ -9,8 +9,9 @@ run_mcmc_one_link <- function(cl,
                               model,
                               paramsList,
                               indexList,
+                              simList,
                               cube_inds,
-                              jump_size=rep(0.5,3),
+                              jump_size,
                               index){
 
   #Last update:   April 22 2016 Biljana
@@ -59,6 +60,9 @@ run_mcmc_one_link <- function(cl,
   #===============================================================
 
   #params g,k,n
+
+  accepted <- data.frame( g=0, n=0, k=0 )
+
   #sample Gstring separately
 
   Gstring_1  <- Gstring
@@ -78,6 +82,7 @@ run_mcmc_one_link <- function(cl,
                                           model      = model,
                                           paramsList = paramsList,
                                           indexList  = indexList,
+                                          simList    = simList,
                                           cube_inds  = cube_inds,
                                           sizeFac    = 0,NAFac=0,verbose = FALSE)$SSEvectorScaled)
   like_Gstring_0    <- (-1/2)*sum(getMSEFuzzy(cl=cl,
@@ -90,6 +95,7 @@ run_mcmc_one_link <- function(cl,
                                           model      = model,
                                           paramsList = paramsList,
                                           indexList  = indexList,
+                                          simList    = simList,
                                           cube_inds  = cube_inds,
                                           sizeFac    = 0,NAFac=0,verbose = FALSE)$SSEvectorScaled)
   tmp <- max(c(like_Gstring_0,like_Gstring_1))
@@ -107,11 +113,12 @@ run_mcmc_one_link <- function(cl,
                             model      = model,
                             paramsList = paramsList,
                             indexList  = indexList,
+                            simList    = simList,
                             cube_inds  = cube_inds)
 
   # sample g
   gCube_prop        <- gCube
-  gCube_prop[index] <- rnorm(1, gCube[index], jump_size[1])
+  gCube_prop[index] <- rnorm(1, gCube[index], jump_size$g[index])
 
   prop_post <- posterior(cl = cl,
                          Bstring    = Bstring,
@@ -124,17 +131,19 @@ run_mcmc_one_link <- function(cl,
                          model      = model,
                          paramsList = paramsList,
                          indexList  = indexList,
+                         simList    = simList,
                          cube_inds  = cube_inds)
   alpha_g   <- prop_post - current_post
 
   if (all(!is.na(alpha_g) , runif(1) < exp(alpha_g))){
     gCube        <- gCube_prop
     current_post <- prop_post
+    accepted$g   <- accepted$g + 1
   }
 
   # sample k
   kCube_prop        <- kCube
-  kCube_prop[index] <- rnorm(1, kCube[index], jump_size[2])
+  kCube_prop[index] <- rnorm(1, kCube[index], jump_size$k[index])
 
   prop_post <- posterior(cl = cl,
                          Bstring    = Bstring,
@@ -147,6 +156,7 @@ run_mcmc_one_link <- function(cl,
                          model      = model,
                          paramsList = paramsList,
                          indexList  = indexList,
+                         simList    = simList,
                          cube_inds  = cube_inds)
 
   alpha_k   <- prop_post - current_post
@@ -154,11 +164,12 @@ run_mcmc_one_link <- function(cl,
   if (all(!is.na(alpha_k) , runif(1) < exp(alpha_k))){
     kCube        <- kCube_prop
     current_post <- prop_post
+    accepted$k   <- accepted$k + 1
   }
 
   # sample n
   nCube_prop        <- nCube
-  nCube_prop[index] <- rlnorm(1, log(nCube[index]), jump_size[3])
+  nCube_prop[index] <- rlnorm(1, log(nCube[index]), jump_size$n[index])
 
   prop_post <- posterior(cl = cl,
                          Bstring    = Bstring,
@@ -171,15 +182,17 @@ run_mcmc_one_link <- function(cl,
                          model      = model,
                          paramsList = paramsList,
                          indexList  = indexList,
+                         simList    = simList,
                          cube_inds  = cube_inds)
   alpha_n   <- prop_post - current_post +
-               dlnorm(nCube[index], log(nCube_prop[index]), jump_size[3], log=T) -
-               dlnorm(nCube_prop[index], log(nCube[index]), jump_size[3], log=T)
+               dlnorm(nCube[index], log(nCube_prop[index]), jump_size$n[index], log=T) -
+               dlnorm(nCube_prop[index], log(nCube[index]), jump_size$n[index], log=T)
 
   if (all(!is.na(alpha_n) , runif(1) < exp(alpha_n))){
     nCube        <- nCube_prop
     current_post <- prop_post
+    accepted$n   <- accepted$n + 1
   }
 
-  list(gCube = gCube, kCube = kCube, nCube = nCube, Gstring = Gstring, post = current_post)
+  list(gCube = gCube, kCube = kCube, nCube = nCube, Gstring = Gstring, post = current_post, accepted = accepted)
 }

@@ -11,11 +11,12 @@ getMSEFuzzy = function(cl1     = NULL,
                        model,
                        paramsList,
                        indexList,
+                       simList,
                        cube_inds){
 
 
   #
-  # 
+  #
   #
   # CHANGELOG:
   #
@@ -173,23 +174,30 @@ getMSEFuzzy = function(cl1     = NULL,
   active_nodes <- which(paramsList$data$namesSignals %in% active_nodes)
 
   #############
-  # INTERPRET THE DISCRETE MODEL WITH LINK ON/OFF PARAMETERS ONLY
-  simList <- prep4simFuzzy(model = model, paramsList = paramsList, verbose = FALSE)
+
+  # NO LONGER CALL THIS HERE. IT GETS WRITTEN OVER AND EATS UP TIME
+  # simList <- prep4simFuzzy(model = model, paramsList = paramsList, verbose = FALSE)
 
   ####################Put model parameters into the appropriate list <--THIS IS THE FUNCTION CONDITIONAL ON THE PRESENCE/ABSENCE OF A LINK
   # This was stated to be Something x 2 matrix, but was not actually....
 
-  simList$gCube[1:n_params,1]    <- gCube*Bstring*Gstring # matrix of __ rows, 2 columns
-  simList$gCube[-(1:n_params),1] <- gCube[cube_inds[,1]]*Bstring[cube_inds[,1]]*Gstring[cube_inds[,1]] # matrix of __ rows, 2 columns
-  simList$gCube[-(1:n_params),2] <- gCube[cube_inds[,2]]*Bstring[cube_inds[,1]]*Gstring[cube_inds[,1]] # matrix of __ rows, 2 columns
+  if ( nrow(simList$gCube) == 2 ) {
+    simList$gCube[1:n_params,1]    <- gCube*Bstring*Gstring # matrix of __ rows, 2 columns
+    simList$gCube[-(1:n_params),1] <- gCube[cube_inds[,1]]*Bstring[cube_inds[,1]]*Gstring[cube_inds[,1]] # matrix of __ rows, 2 columns
+    simList$gCube[-(1:n_params),2] <- gCube[cube_inds[,2]]*Bstring[cube_inds[,1]]*Gstring[cube_inds[,1]] # matrix of __ rows, 2 columns
 
-  simList$nCube[1:n_params,1]    <- nCube                # matrix of __ rows, 2 columns
-  simList$nCube[-(1:n_params),1] <- nCube[cube_inds[,1]] # matrix of __ rows, 2 columns
-  simList$nCube[-(1:n_params),2] <- nCube[cube_inds[,2]] # matrix of __ rows, 2 columns
+    simList$nCube[1:n_params,1]    <- nCube                # matrix of __ rows, 2 columns
+    simList$nCube[-(1:n_params),1] <- nCube[cube_inds[,1]] # matrix of __ rows, 2 columns
+    simList$nCube[-(1:n_params),2] <- nCube[cube_inds[,2]] # matrix of __ rows, 2 columns
 
-  simList$kCube[1:n_params,1]    <- kCube                # matrix of __ rows, 2 columns
-  simList$kCube[-(1:n_params),1] <- kCube[cube_inds[,1]] # matrix of __ rows, 2 columns
-  simList$kCube[-(1:n_params),2] <- kCube[cube_inds[,2]] # matrix of __ rows, 2 columns
+    simList$kCube[1:n_params,1]    <- kCube                # matrix of __ rows, 2 columns
+    simList$kCube[-(1:n_params),1] <- kCube[cube_inds[,1]] # matrix of __ rows, 2 columns
+    simList$kCube[-(1:n_params),2] <- kCube[cube_inds[,2]] # matrix of __ rows, 2 columns
+  } else{
+    simList$gCube <- matrix(gCube*Bstring*Gstring,ncol=1)
+    simList$nCube <- matrix(nCube,ncol=1)
+    simList$kCube <- matrix(kCube,ncol=1)
+  }
 
   # Replicate 4 times to attempt to avoid the stochastic failure issue observed previously
   if(!is.null(cl1)){
@@ -207,7 +215,6 @@ getMSEFuzzy = function(cl1     = NULL,
     if(length(sigsq)==1){
         sigsq = rep(sigsq,dim(paramsList$data$valueSignals[[2]])[2])
     }
-    
     SumSqaredResidsByRun =
                 apply(SimResultsList,3,function(x) {#Get a vector of sums for each 3rd dimension element
                        apply((x[,indexList$signals[active_nodes]] -
