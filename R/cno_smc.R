@@ -41,6 +41,22 @@ cno_smc <- function(n_samples, data, model,
 
   test_bString    <- rep(0,n_params)
 
+  # Finding correct indices for entries of gCube, etc
+  simList <- prep4simFuzzy(model = model, paramsList = paramsList, verbose = FALSE)
+
+  cube_inds <- matrix(0,nrow(simList$gCube) - n_params,2)
+
+  for (jj in (1:nrow(simList$gCube))[-(1:n_params)]) {
+    tmp1 <- strsplit(colnames(model$interMat)[jj],"=")[[1]]
+    tmp2 <- strsplit(tmp1[1],"\\+")[[1]]
+    cube_inds[jj-n_params,1] <- which(apply(sapply(colnames(model$interMat)[1:n_params],function(x)strsplit(x,"=")[[1]]),
+                                            2,function(y) all(y == c(tmp2[1],tmp1[2]))))
+    cube_inds[jj-n_params,2] <- which(apply(sapply(colnames(model$interMat)[1:n_params],function(x)strsplit(x,"=")[[1]]),
+                                            2,function(y) all(y == c(tmp2[2],tmp1[2]))))
+
+  }
+
+  # Continue with initializing model
   init_gCube <- 1*runif(n_params*n_samples)
   init_nCube <- rexp(n_params*n_samples,1/2)
   init_kCube <- 1*runif(n_params*n_samples)
@@ -99,7 +115,8 @@ cno_smc <- function(n_samples, data, model,
                                                       p_link     = p_link,
                                                       model      = model,
                                                       paramsList = paramsList,
-                                                      indexList  = indexList)
+                                                      indexList  = indexList,
+                                                      cube_inds  = cube_inds)
       }))
     } else {
       new_post <- (sapply(1:n_samples, function(samp){
@@ -113,7 +130,8 @@ cno_smc <- function(n_samples, data, model,
                                                           p_link     = p_link,
                                                           model      = model,
                                                           paramsList = paramsList,
-                                                          indexList  = indexList)
+                                                          indexList  = indexList,
+                                                          cube_inds  = cube_inds)
       }))
     }
 
@@ -167,6 +185,7 @@ cno_smc <- function(n_samples, data, model,
                                                                                  model      = model,
                                                                                  paramsList = paramsList,
                                                                                  indexList  = indexList,
+                                                                                 cube_inds  = cube_inds,
                                                                                  jump_size  = jump_size)})
     }else{
       tmp <- sapply(1:n_samples,function(samp){wrapper_to_sample_all_links(cl   = cl1,
@@ -181,6 +200,7 @@ cno_smc <- function(n_samples, data, model,
                                                                            model      = model,
                                                                            paramsList = paramsList,
                                                                            indexList  = indexList,
+                                                                           cube_inds  = cube_inds,
                                                                            jump_size  = jump_size)})
     }
 

@@ -10,7 +10,8 @@ getMSEFuzzy = function(cl1     = NULL,
                        verbose    = FALSE,
                        model,
                        paramsList,
-                       indexList){
+                       indexList,
+                       cube_inds){
 
 
   #
@@ -176,9 +177,19 @@ getMSEFuzzy = function(cl1     = NULL,
   simList <- prep4simFuzzy(model = model, paramsList = paramsList, verbose = FALSE)
 
   ####################Put model parameters into the appropriate list <--THIS IS THE FUNCTION CONDITIONAL ON THE PRESENCE/ABSENCE OF A LINK
-  simList$gCube <- gCube*Bstring*Gstring # matrix of 62 rows, 2 columns
-  simList$nCube <- nCube                 # matrix of 62 rows, 2 columns
-  simList$kCube <- kCube                 # matrix of 62 rows, 2 columns
+  # This was stated to be Something x 2 matrix, but was not actually....
+
+  simList$gCube[1:n_params,1]    <- gCube*Bstring*Gstring # matrix of __ rows, 2 columns
+  simList$gCube[-(1:n_params),1] <- gCube[cube_inds[,1]]*Bstring[cube_inds[,1]]*Gstring[cube_inds[,1]] # matrix of __ rows, 2 columns
+  simList$gCube[-(1:n_params),2] <- gCube[cube_inds[,2]]*Bstring[cube_inds[,1]]*Gstring[cube_inds[,1]] # matrix of __ rows, 2 columns
+
+  simList$nCube[1:n_params,1]    <- nCube                # matrix of __ rows, 2 columns
+  simList$nCube[-(1:n_params),1] <- nCube[cube_inds[,1]] # matrix of __ rows, 2 columns
+  simList$nCube[-(1:n_params),2] <- nCube[cube_inds[,2]] # matrix of __ rows, 2 columns
+
+  simList$kCube[1:n_params,1]    <- kCube                # matrix of __ rows, 2 columns
+  simList$kCube[-(1:n_params),1] <- kCube[cube_inds[,1]] # matrix of __ rows, 2 columns
+  simList$kCube[-(1:n_params),2] <- kCube[cube_inds[,2]] # matrix of __ rows, 2 columns
 
   # Replicate 4 times to attempt to avoid the stochastic failure issue observed previously
   if(!is.null(cl1)){
