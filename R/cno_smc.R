@@ -245,6 +245,7 @@ cno_smc <- function(n_samples, data, model,
     }
     if (checkpoint){
       print("Saving samples as checkpoint.")
+      print(paste("at", Sys.time()))
       save(list=ls(),file = paste("smc_checkpoint_",stage,"_lots_of_stuff.RData",sep=""))
     }
   }
@@ -254,7 +255,7 @@ cno_smc <- function(n_samples, data, model,
 
   if(diagnostics) print(w)
 
-  smc_samples$version <- "v1.03"
+  smc_samples$version <- "v1.04"
   smc_samples
 }
 
