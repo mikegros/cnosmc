@@ -61,7 +61,7 @@ cno_smc <- function(n_samples, data, model,
   }
 
   # Continue with initializing model
-  init_gCube <- 1*runif(n_params*n_samples)
+  init_gCube <- 0.5*runif(n_params*n_samples) + 0.5
   init_nCube <- rexp(n_params*n_samples,1/2)
   init_kCube <- 1*runif(n_params*n_samples)
   init_sigsq <- 1/rgamma(n_samples*n_signals,1.25,10^-5)
@@ -279,7 +279,7 @@ cno_smc <- function(n_samples, data, model,
       break
     } else{
       new_link <- which(new_bString - test_bString == 1)
-      smc_samples$gCube[,new_link]   <- runif(n_samples*length(new_link))
+      smc_samples$gCube[,new_link]   <- 0.5*runif(n_samples*length(new_link))+0.5
       smc_samples$nCube[,new_link]   <- rexp(n_samples*length(new_link),1/2)
       smc_samples$kCube[,new_link]   <- runif(n_samples*length(new_link))
       smc_samples$Gstring[,new_link] <- rbinom(n_samples*length(new_link),1,p_link)

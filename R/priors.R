@@ -27,7 +27,7 @@ LogpriorGstring = function(initGstring,p=rep(.9,length(initGstring))){
   sum(initGstring*log(p) + (1-initGstring)*log(1-p))
 }
 ############
-Logpriorg = function(gCube,lower=0,upper=1){
+Logpriorg = function(gCube,lower=0.5,upper=1){
   # uniform prior
   ifelse(min(gCube)>=lower & max(gCube)<=upper, 0, -Inf)
 }
