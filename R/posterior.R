@@ -74,7 +74,7 @@ posterior = function(cl,
                          NAFac      = 0,
                          verbose    = FALSE)
 
-  lik = -(1/2)*sum(get_mse$SSEvectorScaled[get_mse$active_nodes]) - sum(get_mse$nDataP[get_mse$active_nodes]/2*log(sigsq[get_mse$active_nodes]))
+  lik = -(1/2)*sum(get_mse$SSEvectorScaled[get_mse$active_nodes]/sigsq[get_mse$active_nodes]) - sum(get_mse$nDataP[get_mse$active_nodes]/2*log(sigsq[get_mse$active_nodes]))
 
   prior_sigsq   = Logpriorsigsq(sigsq[get_mse$active_nodes],1.25,10^-5)
 

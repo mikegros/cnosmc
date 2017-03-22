@@ -84,7 +84,7 @@ run_mcmc_one_link <- function(cl,
                                           indexList  = indexList,
                                           simList    = simList,
                                           cube_inds  = cube_inds,
-                                          sizeFac    = 0,NAFac=0,verbose = FALSE)$SSEvectorScaled)
+                                          sizeFac    = 0,NAFac=0,verbose = FALSE)$SSEvectorScaled/sigsq)
   like_Gstring_0    <- (-1/2)*sum(getMSEFuzzy(cl=cl,
                                           Bstring    = Bstring,
                                           Gstring    = Gstring_0,
@@ -97,7 +97,7 @@ run_mcmc_one_link <- function(cl,
                                           indexList  = indexList,
                                           simList    = simList,
                                           cube_inds  = cube_inds,
-                                          sizeFac    = 0,NAFac=0,verbose = FALSE)$SSEvectorScaled)
+                                          sizeFac    = 0,NAFac=0,verbose = FALSE)$SSEvectorScaled/sigsq)
   tmp <- max(c(like_Gstring_0,like_Gstring_1))
   cond_p <- p_link*exp(like_Gstring_1-tmp)/(p_link*exp(like_Gstring_1-tmp)+(1-p_link)*exp(like_Gstring_0-tmp))
   Gstring[index] <- rbinom(1,1,cond_p)
