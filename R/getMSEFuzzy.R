@@ -218,7 +218,7 @@ getMSEFuzzy = function(cl1     = NULL,
     SumSqaredResidsByRun =
                 apply(SimResultsList,3,function(x) {#Get a vector of sums for each 3rd dimension element
                        apply((x[,indexList$signals[active_nodes]] -
-                       paramsList$data$valueSignals[[2]][,active_nodes])^2, 2, sum,na.rm=TRUE)/sigsq[active_nodes]# sum down columns
+                       paramsList$data$valueSignals[[2]][,active_nodes])^2, 2, sum,na.rm=TRUE)#/sigsq[active_nodes]# sum down columns
                      })
 
     SSEvectorScaled = rep(0,dim(paramsList$data$valueSignals[[2]])[2])
@@ -232,9 +232,11 @@ getMSEFuzzy = function(cl1     = NULL,
     }
 
      SSEvectorScaled = rep(0,dim(paramsList$data$valueSignals[[2]])[2])
+    # SSEvectorScaled[active_nodes] = apply((SimResultsList[,indexList$signals[active_nodes],drop=FALSE] -
+    #                                          paramsList$data$valueSignals[[2]][,active_nodes,drop=FALSE])^2, 2, sum,na.rm=TRUE)# /sigsq[active_nodes]
      SSEvectorScaled[active_nodes] = apply((SimResultsList[,indexList$signals[active_nodes],drop=FALSE] -
-                                           paramsList$data$valueSignals[[2]][,active_nodes,drop=FALSE])^2, 2, sum,na.rm=TRUE)/sigsq[active_nodes]
-
+                                              paramsList$data$valueSignals[[2]][,active_nodes,drop=FALSE])^2, 2, sum)# /sigsq[active_nodes]
+     SSEvectorScaled[is.na(SSEvectorScaled)] <- 1.e10
 
   }
 
