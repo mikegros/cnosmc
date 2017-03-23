@@ -34,7 +34,7 @@ Logpriorg = function(gCube,lower=0,upper=1){
 ############
 Logpriorn = function(nCube,lambda=2){
   # exponential prior with mean lambda is proportional to
-  -sum(nCube)/lambda
+  -sum(nCube-1)/lambda
 }
 ############
 Logpriork = function(kCube,lower=0,upper=1){

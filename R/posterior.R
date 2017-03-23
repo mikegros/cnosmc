@@ -56,6 +56,7 @@ posterior = function(cl,
   prior_n       = Logpriorn(nCube)
   prior_Gstring = LogpriorGstring(Gstring,p_link)
 
+  if(any(nCube <= 1)) return(-Inf)
   if(any(c(prior_g,prior_k,prior_n) == -Inf)) return(-Inf)
 
   get_mse <- getMSEFuzzy(cl,

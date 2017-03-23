@@ -182,9 +182,9 @@ getMSEFuzzy = function(cl1     = NULL,
   # This was stated to be Something x 2 matrix, but was not actually....
 
   if ( nrow(simList$gCube) == 2 ) {
-    simList$gCube[1:n_params,1]    <- gCube*Bstring*Gstring # matrix of __ rows, 2 columns
-    simList$gCube[-(1:n_params),1] <- gCube[cube_inds[,1]]*Bstring[cube_inds[,1]]*Gstring[cube_inds[,1]] # matrix of __ rows, 2 columns
-    simList$gCube[-(1:n_params),2] <- gCube[cube_inds[,2]]*Bstring[cube_inds[,1]]*Gstring[cube_inds[,1]] # matrix of __ rows, 2 columns
+    simList$gCube[1:n_params,1]    <- gCube # matrix of __ rows, 2 columns
+    simList$gCube[-(1:n_params),1] <- gCube[cube_inds[,1]] # matrix of __ rows, 2 columns
+    simList$gCube[-(1:n_params),2] <- gCube[cube_inds[,2]] # matrix of __ rows, 2 columns
 
     simList$nCube[1:n_params,1]    <- nCube                # matrix of __ rows, 2 columns
     simList$nCube[-(1:n_params),1] <- nCube[cube_inds[,1]] # matrix of __ rows, 2 columns
@@ -193,17 +193,22 @@ getMSEFuzzy = function(cl1     = NULL,
     simList$kCube[1:n_params,1]    <- kCube                # matrix of __ rows, 2 columns
     simList$kCube[-(1:n_params),1] <- kCube[cube_inds[,1]] # matrix of __ rows, 2 columns
     simList$kCube[-(1:n_params),2] <- kCube[cube_inds[,2]] # matrix of __ rows, 2 columns
+
+    tmpSimList <- cutSimList(simList, Bstring*Gstring)
   } else{
     simList$gCube <- matrix(gCube*Bstring*Gstring,ncol=1)
     simList$nCube <- matrix(nCube,ncol=1)
     simList$kCube <- matrix(kCube,ncol=1)
+
+    tmpSimList <- cutSimList(simList, Bstring*Gstring)
   }
 
   # Replicate 4 times to attempt to avoid the stochastic failure issue observed previously
   if(!is.null(cl1)){
+    tmpModel <- cutModel(model, Bstring*Gstring)
     SimResultsList <- clusterCall(cl1,function() {simFuzzyT1(CNOlist = paramsList$data,
-                                                             model   = model,
-                                                             simList = simList)})
+                                                             model   = tmpModel,
+                                                             simList = tmpSimList)})
     SimResultsList <- array(unlist(SimResultsList), dim = c(nrow(SimResultsList[[1]]), ncol(SimResultsList[[1]]), length(SimResultsList)))
     SimResultsList[is.na(SimResultsList)] = 0
     # Obtain the SSEs from the simulated results and the data
@@ -224,9 +229,10 @@ getMSEFuzzy = function(cl1     = NULL,
     SSEvectorScaled = rep(0,dim(paramsList$data$valueSignals[[2]])[2])
     SSEvectorScaled[active_nodes] = SumSqaredResidsByRun[, which.min(apply(SumSqaredResidsByRun,2,sum))]
   }else{
+    tmpModel <- cutModel(model, Bstring*Gstring)
     SimResultsList <- simFuzzyT1(CNOlist = paramsList$data,
-                                      model   = model,
-                                      simList = simList)
+                                      model   = tmpModel,
+                                      simList = tmpSimList)
     if(length(sigsq)==1){
         sigsq = rep(sigsq,dim(paramsList$data$valueSignals[[2]])[2])
     }
