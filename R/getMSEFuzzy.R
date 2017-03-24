@@ -181,7 +181,7 @@ getMSEFuzzy = function(cl1     = NULL,
   ####################Put model parameters into the appropriate list <--THIS IS THE FUNCTION CONDITIONAL ON THE PRESENCE/ABSENCE OF A LINK
   # This was stated to be Something x 2 matrix, but was not actually....
 
-  if ( nrow(simList$gCube) == 2 ) {
+  if ( ncol(simList$gCube) == 2 ) {
     simList$gCube[1:n_params,1]    <- gCube # matrix of __ rows, 2 columns
     simList$gCube[-(1:n_params),1] <- gCube[cube_inds[,1]] # matrix of __ rows, 2 columns
     simList$gCube[-(1:n_params),2] <- gCube[cube_inds[,2]] # matrix of __ rows, 2 columns
