@@ -195,12 +195,24 @@ getMSEFuzzy = function(cl1     = NULL,
     simList$kCube[-(1:n_params),2] <- kCube[cube_inds[,2]] # matrix of __ rows, 2 columns
 
     tmpSimList <- cutSimList(simList, Bstring*Gstring)
+
+    trim_inds <- rownames(simList$finalCube) %in% rownames(tmpSimList$finalCube)
+    tmpSimList$gCube <- tmpSimList$gCube[trim_inds,]
+    tmpSimList$nCube <- tmpSimList$nCube[trim_inds,]
+    tmpSimList$kCube <- tmpSimList$kCube[trim_inds,]
+
   } else{
     simList$gCube <- matrix(gCube*Bstring*Gstring,ncol=1)
     simList$nCube <- matrix(nCube,ncol=1)
     simList$kCube <- matrix(kCube,ncol=1)
 
     tmpSimList <- cutSimList(simList, Bstring*Gstring)
+
+    trim_inds <- rownames(simList$finalCube) %in% rownames(tmpSimList$finalCube)
+    tmpSimList$gCube <- tmpSimList$gCube[trim_inds,]
+    tmpSimList$nCube <- tmpSimList$nCube[trim_inds,]
+    tmpSimList$kCube <- tmpSimList$kCube[trim_inds,]
+
   }
 
   # Replicate 4 times to attempt to avoid the stochastic failure issue observed previously
