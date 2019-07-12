@@ -4,7 +4,7 @@ Title: SMC sampling for structure discovery and calibration of protein networks 
 Version: 0.1
 Date: 2016-04-26
 Author: Dave Campbell, Derek Bingham, Luyao Lin, Biljana Jonoska, Mike Grosskopf
-Maintainer: Mike Grosskopf <dac5@sfu.ca>
+Maintainer: Mike Grosskopf <mike.grosskopf@gmail.com>
 Description: Sequential Monte Carlo (SMC) for using Bayesian inference for fitting transfer function parameters and identifying the structure of the protein flow network.
 License: GPL-2
 LazyData: FALSE
