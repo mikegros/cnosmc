@@ -235,8 +235,11 @@ cno_smc <- function(n_samples, data, model,
       g_jump <- g_jump + tmp[,samp]$accepted$g
       n_jump <- n_jump + tmp[,samp]$accepted$n
       k_jump <- k_jump + tmp[,samp]$accepted$k
-
-      old_post[samp]             <- tmp[,samp]$post
+      if (n_mh == 0){
+        old_post[samp] <- new_post[samp]
+      } else{
+        old_post[samp] <- tmp[,samp]$post
+      }
     }
 
     # Update jump size
